@@ -73,3 +73,7 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Audio
+*.wav
+*.mp3
