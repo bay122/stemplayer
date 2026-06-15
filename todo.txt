@@ -1,0 +1,20 @@
+stem_loader.py
+muted = is_click or any(x in fname for x in ["guide", "cue", "guia"])
+                fx_enabled = not any(x in fname for x in ["drum", "drums", "bateria", "batería"])
+no está funcionando
+las pistas Guide y Click Track deberían tener desactivado el FX. no mutea las pistas.
+
+- posibilidad de modificar el pitch detectado
+- posibilidad de ingresar el pitch en caso de no ser detectado
+
+- Traceback (most recent call last):
+  File "Z:\home\drelthand\workspace\stemsplayer\steamsplayer_new\app\ui\library_panel.py", line 170, in _on_context_menu
+    self._show_cache_cleanup_dialog(song_name)
+  File "Z:\home\drelthand\workspace\stemsplayer\steamsplayer_new\app\ui\library_panel.py", line 253, in _show_cache_cleanup_dialog
+    cb.setData(entry_path)
+    ^^^^^^^^^^
+AttributeError: 'PySide6.QtWidgets.QCheckBox' object has no attribute 'setData'
+
+- en la vista de detalle lista las carpetas de cache, pero dice KEY=?, BPM=?
+El nombre de las carpetas en cache indican esos datos. Ej: "cache/F-89bpm/"
+- crea una carpeta docs/ y reestructura el README.md en diferentes archivos. El README.md debe seguir existiendo, pero deja que solo contenga información del proyecto, qué hace, cómo instalarlo, y indice de los diferentes documentos que irán en docs/ y qué información contienen. El resto de la información va en docs/

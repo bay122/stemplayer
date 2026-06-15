@@ -1,0 +1,33 @@
+def build_metadata(
+    name: str = "",
+    artist: str = "",
+    detected_key: str = "",
+    detected_bpm: int = 0,
+    pitch_shift: int = 0,
+    tempo_ratio: float = 1.0,
+    count_in_bars: int = 0,
+    click_during_playback: bool = False,
+    metronome_volume: float = 0.5,
+    metronome_pan: float = 0.0,
+    master_volume: float = 1.0,
+    duration: str = "00:00",
+    click_offset_samples: int = 0,
+    stems: list = None,
+) -> dict:
+    """Crea el diccionario de metadatos de forma unificada."""
+    return {
+        "name": name,
+        "artist": artist,
+        "detected_key": detected_key,
+        "detected_bpm": detected_bpm,
+        "pitch_shift": pitch_shift,
+        "tempo_ratio": tempo_ratio,
+        "count_in_bars": count_in_bars,
+        "click_offset_samples": click_offset_samples,
+        "duration": duration,
+        "click_during_playback": click_during_playback,
+        "metronome_volume": metronome_volume,
+        "metronome_pan": metronome_pan,
+        "master_volume": master_volume,
+        "stems": stems if stems is not None else [],
+    }
