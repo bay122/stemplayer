@@ -5,7 +5,7 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushBu
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont
 from app.ui.chordpro_editor import ChordProParser
-from app.ui.theme import DARK_THEME as theme
+from app.ui.theme import current as theme
 
 
 class LiveChordWidget(QWidget):

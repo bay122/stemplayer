@@ -52,17 +52,18 @@ class StemPlayer(
     ChordProPreviewMixin,
     ChordProGenerationMixin,
 ):
-    def __init__(self):
+    def __init__(self, theme=None):
         super().__init__()
         self.setWindowTitle("Stem Player")
         self.setMinimumSize(1400, 800)
         self.resize(1550, 800)
+        self.theme = theme if theme is not None else DARK_THEME
 
         self.state = StateManager()
         self.threads = ThreadManager()
         self.config_mgr = ConfigManager()
         self.lib_mgr = LibraryManager(self.config_mgr.get_library_path())
-        self.icons_dir = get_icons_dir()
+        self.icons_dir = self.theme.icons_dir if self.theme.icons_dir else get_icons_dir()
 
         self._pending_seek = None
         self._is_manual_stop = False
@@ -79,7 +80,7 @@ class StemPlayer(
         self.blink_timer.start(500)
 
         self._build_ui()
-        apply_theme(self, DARK_THEME)
+        apply_theme(self, self.theme)
 
     # ------------------------------------------------------------------
     # UI Construction
@@ -193,7 +194,7 @@ class StemPlayer(
         self.song_info_layout.setSpacing(2)
 
         self.song_name_label = QLabel("Canción: --")
-        self.song_name_label.setStyleSheet(f"color: {DARK_THEME.TEXT_PRIMARY}; font-size: 14px; font-weight: bold;")
+        self.song_name_label.setStyleSheet(f"color: {self.theme.TEXT_PRIMARY}; font-size: 14px; font-weight: bold;")
         self.song_name_label.setWordWrap(True)
         self.song_info_layout.addWidget(self.song_name_label)
 
@@ -211,20 +212,20 @@ class StemPlayer(
     def _build_status_area(self, center_layout):
         self.status_label = QLabel("Listo")
         self.status_label.setAlignment(Qt.AlignCenter)
-        self.status_label.setStyleSheet(f"color: {DARK_THEME.TEXT_SECONDARY}; font-size: 12px;")
+        self.status_label.setStyleSheet(f"color: {self.theme.TEXT_SECONDARY}; font-size: 12px;")
         center_layout.addWidget(self.status_label)
 
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
         self.progress_bar.setTextVisible(True)
-        self.progress_bar.setVisible(False)
+        self.progress_bar.setVisible(True)
         center_layout.addWidget(self.progress_bar)
 
         self.bg_status_label = QLabel("")
         self.bg_status_label.setAlignment(Qt.AlignCenter)
-        self.bg_status_label.setStyleSheet(f"color: {DARK_THEME.ACCENT_PURPLE}; font-size: 11px; font-style: italic;")
-        self.bg_status_label.setVisible(False)
+        self.bg_status_label.setStyleSheet(f"color: {self.theme.ACCENT_PURPLE}; font-size: 11px; font-style: italic;")
+        self.bg_status_label.setVisible(True)
         center_layout.addWidget(self.bg_status_label)
 
     def _build_master_metronome_area(self, center_layout):
@@ -232,7 +233,7 @@ class StemPlayer(
         master_row.setSpacing(8)
 
         master_label = QLabel("Master:")
-        master_label.setStyleSheet(f"color: {DARK_THEME.TEXT_PRIMARY}; font-size: 12px; font-weight: bold;")
+        master_label.setStyleSheet(f"color: {self.theme.TEXT_PRIMARY}; font-size: 12px; font-weight: bold;")
         master_label.setFixedWidth(50)
         master_row.addWidget(master_label)
 
@@ -269,7 +270,7 @@ class StemPlayer(
         self.metronome_volume_slider.valueChanged.connect(self._on_metronome_volume_changed)
         self.metronome_volume_slider.sliderReleased.connect(self._on_metronome_volume_released)
         self.metronome_volume_slider.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.metronome_volume_slider.setVisible(False)
+        self.metronome_volume_slider.setVisible(True)
         metro_row_2.addWidget(self.metronome_volume_slider)
 
         self.metronome_pan_slider = PanSlider(parent=self, icons_dir=self.icons_dir)
@@ -277,7 +278,7 @@ class StemPlayer(
         self.metronome_pan_slider.setMaximumSize(200, 80)
         self.metronome_pan_slider.valueChanged.connect(self._on_metronome_pan_changed)
         self.metronome_pan_slider.sliderReleased.connect(self._on_metronome_pan_released)
-        self.metronome_pan_slider.setVisible(False)
+        self.metronome_pan_slider.setVisible(True)
         metro_row_2.addWidget(self.metronome_pan_slider)
         master_row.setStretch(master_row.indexOf(self.master_volume_slider), 1)
 
@@ -331,9 +332,9 @@ class StemPlayer(
         self.chordpro_fullscreen_text.setReadOnly(True)
         self.chordpro_fullscreen_text.setStyleSheet(f"""
             QTextEdit {{
-                background-color: {DARK_THEME.BG_EDITOR};
-                color: {DARK_THEME.TEXT_EDITOR};
-                border: 1px solid {DARK_THEME.BORDER_ALT};
+                background-color: {self.theme.BG_EDITOR};
+                color: {self.theme.TEXT_EDITOR};
+                border: 1px solid {self.theme.BORDER_ALT};
                 font-family: 'Segoe UI', Arial, sans-serif;
                 font-size: 14px;
                 padding: 8px;
@@ -352,35 +353,35 @@ class StemPlayer(
         self.save_lib_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-save.svg")))
         self.save_lib_btn.setFixedHeight(28)
         self.save_lib_btn.clicked.connect(self._save_to_library)
-        self.save_lib_btn.setVisible(False)
+        self.save_lib_btn.setVisible(True)
         save_row.addWidget(self.save_lib_btn)
 
         self.save_changes_btn = QPushButton("Guardar Cambios")
         self.save_changes_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-save.svg")))
         self.save_changes_btn.setFixedHeight(28)
         self.save_changes_btn.clicked.connect(self._save_changes)
-        self.save_changes_btn.setVisible(False)
+        self.save_changes_btn.setVisible(True)
         save_row.addWidget(self.save_changes_btn)
 
         self.generate_chordpro_btn = QPushButton("Generar Sheet de acordes")
         self.generate_chordpro_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-file-code.svg")))
         self.generate_chordpro_btn.setFixedHeight(28)
         self.generate_chordpro_btn.clicked.connect(self._on_generate_chordpro_clicked)
-        self.generate_chordpro_btn.setVisible(False)
+        self.generate_chordpro_btn.setVisible(True)
         save_row.addWidget(self.generate_chordpro_btn)
 
         self.edit_chordpro_btn = QPushButton("Editar Acordes")
         self.edit_chordpro_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-edit.svg")))
         self.edit_chordpro_btn.setFixedHeight(28)
         self.edit_chordpro_btn.clicked.connect(self._on_edit_chordpro_clicked)
-        self.edit_chordpro_btn.setVisible(False)
+        self.edit_chordpro_btn.setVisible(True)
         save_row.addWidget(self.edit_chordpro_btn)
 
         self.save_as_btn = QPushButton("Guardar Como...")
         self.save_as_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-saveas.svg")))
         self.save_as_btn.setFixedHeight(28)
         self.save_as_btn.clicked.connect(self._save_as)
-        self.save_as_btn.setVisible(False)
+        self.save_as_btn.setVisible(True)
         save_row.addWidget(self.save_as_btn)
 
         self.toggle_live_btn = QPushButton("Karaoke")
@@ -388,7 +389,7 @@ class StemPlayer(
         self.toggle_live_btn.setFixedHeight(28)
         self.toggle_live_btn.setCheckable(True)
         self.toggle_live_btn.clicked.connect(self._toggle_live_mode)
-        self.toggle_live_btn.setVisible(False)
+        self.toggle_live_btn.setVisible(True)
         save_row.addWidget(self.toggle_live_btn)
 
         center_layout.addLayout(save_row)
@@ -399,7 +400,7 @@ class StemPlayer(
         self.close_song_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-close-x.svg"), "#FF5555"))
         self.close_song_btn.setMinimumHeight(36)
         self.close_song_btn.clicked.connect(self._close_song)
-        self.close_song_btn.setVisible(False)
+        self.close_song_btn.setVisible(True)
         close_row.addWidget(self.close_song_btn)
 
         close_row.addStretch()
@@ -408,7 +409,7 @@ class StemPlayer(
         self.add_to_setlist_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-plus.svg")))
         self.add_to_setlist_btn.setMinimumHeight(36)
         self.add_to_setlist_btn.clicked.connect(self._on_add_to_setlist_clicked)
-        self.add_to_setlist_btn.setVisible(False)
+        self.add_to_setlist_btn.setVisible(True)
         close_row.addWidget(self.add_to_setlist_btn)
 
         center_layout.addLayout(close_row)
@@ -431,7 +432,7 @@ class StemPlayer(
         self.key_label = QLabel("Key: --")
         self.key_label.setFont(QFont("Arial", 28, QFont.Bold))
         self.key_label.setAlignment(Qt.AlignCenter)
-        self.key_label.setStyleSheet(f"color: {DARK_THEME.ACCENT_CYAN};")
+        self.key_label.setStyleSheet(f"color: {self.theme.ACCENT_CYAN};")
         key_row.addWidget(self.key_label, 1)
         self.edit_key_btn = QPushButton()
         self.edit_key_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-edit.svg"), "#888888"))
@@ -444,7 +445,7 @@ class StemPlayer(
         self.bpm_label = QLabel("BPM: --")
         self.bpm_label.setFont(QFont("Arial", 18, QFont.Bold))
         self.bpm_label.setAlignment(Qt.AlignCenter)
-        self.bpm_label.setStyleSheet(f"color: {DARK_THEME.TEXT_SECONDARY};")
+        self.bpm_label.setStyleSheet(f"color: {self.theme.TEXT_SECONDARY};")
         av.addWidget(self.bpm_label)
 
         right_layout.addWidget(analysis_box)
@@ -480,7 +481,7 @@ class StemPlayer(
 
         th.addWidget(QLabel("Original:"))
         self.orig_bpm_label = QLabel("--")
-        self.orig_bpm_label.setStyleSheet(f"color: {DARK_THEME.TEXT_SECONDARY};")
+        self.orig_bpm_label.setStyleSheet(f"color: {self.theme.TEXT_SECONDARY};")
         th.addWidget(self.orig_bpm_label)
 
         self.bpm_spin = QSpinBox()
@@ -494,7 +495,7 @@ class StemPlayer(
         th.addWidget(self.apply_tempo_btn)
 
         self.tempo_ratio_label = QLabel("100%")
-        self.tempo_ratio_label.setStyleSheet(f"color: {DARK_THEME.TEXT_SECONDARY}; min-width: 50px;")
+        self.tempo_ratio_label.setStyleSheet(f"color: {self.theme.TEXT_SECONDARY}; min-width: 50px;")
         th.addWidget(self.tempo_ratio_label)
 
         right_layout.addWidget(tempo_box)
@@ -584,7 +585,7 @@ class StemPlayer(
         self.playback_progress = QSlider(Qt.Horizontal)
         self.playback_progress.setRange(0, 1000)
         self.playback_progress.setValue(0)
-        self.playback_progress.setStyleSheet(DARK_THEME.playback_slider_qss())
+        self.playback_progress.setStyleSheet(self.theme.playback_slider_qss())
         self.playback_progress.setTracking(True)
         self.playback_progress.sliderReleased.connect(self._on_playback_seek)
         self.playback_progress.sliderMoved.connect(self._on_playback_preview)
@@ -592,11 +593,11 @@ class StemPlayer(
 
         time_row = QHBoxLayout()
         self.current_time_label = QLabel("00:00")
-        self.current_time_label.setStyleSheet(f"color: {DARK_THEME.TEXT_PRIMARY}; font-size: 11px; font-family: {DARK_THEME.FONT_MONO};")
+        self.current_time_label.setStyleSheet(f"color: {self.theme.TEXT_PRIMARY}; font-size: 11px; font-family: {self.theme.FONT_MONO};")
         time_row.addWidget(self.current_time_label)
         time_row.addStretch()
         self.total_time_label = QLabel("00:00")
-        self.total_time_label.setStyleSheet(f"color: {DARK_THEME.TEXT_SECONDARY}; font-size: 11px; font-family: {DARK_THEME.FONT_MONO};")
+        self.total_time_label.setStyleSheet(f"color: {self.theme.TEXT_SECONDARY}; font-size: 11px; font-family: {self.theme.FONT_MONO};")
         time_row.addWidget(self.total_time_label)
         pv.addLayout(time_row)
 
@@ -604,7 +605,7 @@ class StemPlayer(
 
         self.chordpro_preview_widget = ChordProPreviewWidget(parent=self, icons_dir=self.icons_dir)
         self.chordpro_preview_widget.setMaximumHeight(360)
-        self.chordpro_preview_widget.setVisible(False)
+        self.chordpro_preview_widget.setVisible(True)
         right_layout.addWidget(self.chordpro_preview_widget)
 
         meters_group = QGroupBox("Medidores del Sistema")

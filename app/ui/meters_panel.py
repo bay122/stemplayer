@@ -2,7 +2,7 @@ import psutil
 from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QProgressBar, QWidget
 from PySide6.QtCore import QTimer, Qt
 from app.ui.svg_icon import svg_icon
-from app.ui.theme import DARK_THEME as theme
+from app.ui.theme import current as theme
 import os
 
 

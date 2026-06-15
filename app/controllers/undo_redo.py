@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from app.ui.theme import DARK_THEME as theme
+from app.ui.theme import current as theme
 
 
 class UndoRedoMixin:

@@ -1,20 +1,69 @@
-stem_loader.py
-muted = is_click or any(x in fname for x in ["guide", "cue", "guia"])
-                fx_enabled = not any(x in fname for x in ["drum", "drums", "bateria", "batería"])
-no está funcionando
-las pistas Guide y Click Track deberían tener desactivado el FX. no mutea las pistas.
+- Cuando cambio la libería, el config.json borra el contenido de "setlists". 
+Esto no es del todo correcto. En realidad "setlists" debería ser un objeto y el listado de los setlits deberían estar almacenados por librería. Así, si cambio la librería, la vista debería recargar los setlists que correspondan a esa librería, pero no perdería los setlists que se han creado para la librería anterior. 
 
-- posibilidad de modificar el pitch detectado
-- posibilidad de ingresar el pitch en caso de no ser detectado
+[11:20:00][ChordAnalysis] Inicio de analisis para 'C:/Users/jimen/Music/stemplayer_lib\El Dios que Adoramos - IBI' con 18 stems
+[11:20:00][ChordAnalysis] Guide detectado: CUES
+[11:20:00][Whisper] Iniciando transcripción
+[11:20:04][Whisper] Remuestreando guide a 16000 Hz desde 44100 Hz
+[11:20:04][Whisper] Cargando modelo 'small' en CPU
+[11:20:05][Whisper] Transcribiendo guia con agrupacion semantica...
+[11:20:39][Whisper] Se detectaron 33 segmentos de seccion optimizados
+[11:20:40][Harmonic Mix] Iniciando la fusión de stems
+[11:20:40][ChordAnalysis] Stems incluidos para analisis armonico: ['AG 1', 'AG 2', 'BASS', 'EG 1', 'EG 10', 'EG 11', 'EG 2', 'EG 3', 'EG 4', 'EG 5', 'EG 6', 'EG 7', 'EG 8', 'EG 9', 'PIANO']
+[11:20:40][ChordAnalysis] Stems omitidos: ['CLICK', 'CUES', 'DRUMS']
+[11:20:40][Extract Chords] Iniciando la extracción de acordes
+[11:20:56][Extract Chords] Total de acordes detectados: 173
+[11:20:56][ChordAnalysis] Analisis completado en 56.12s | secciones=33 | acordes=173
+[11:20:57][OpenRouter] Inicio de generacion para 'El Dios que Adoramos - IBI'
+[11:20:57][OpenRouter] PRIMERA SOLICITUD: Generando archivo ChordPro...
+[11:20:57][OpenRouter] [Solicitud 1] Enviando con modelo 'anthropic/claude-sonnet-4.6'
+[11:20:58][OpenRouter] [Solicitud 1] HTTP 402 recibido para modelo 'anthropic/claude-sonnet-4.6'
+[11:20:58][OpenRouter] [Solicitud 1] Intento fallido con modelo 'anthropic/claude-sonnet-4.6'
+[11:20:58][OpenRouter] Excepcion no controlada durante la generacion
+Traceback (most recent call last):
+  File "Z:\home\drelthand\workspace\stemsplayer\steamsplayer_new\app\services\openrouter_service.py", line 393, in run
+    chordpro, sync_data = request_openrouter_chordpro(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "Z:\home\drelthand\workspace\stemsplayer\steamsplayer_new\app\services\openrouter_service.py", line 273, in request_openrouter_chordpro
+    raise RuntimeError(_friendly_openrouter_error(last_status_code, last_response_text))
+RuntimeError: OpenRouter no tiene credito disponible para completar esta solicitud.
+QThread: Destroyed while thread '' is still running
 
-- Traceback (most recent call last):
-  File "Z:\home\drelthand\workspace\stemsplayer\steamsplayer_new\app\ui\library_panel.py", line 170, in _on_context_menu
-    self._show_cache_cleanup_dialog(song_name)
-  File "Z:\home\drelthand\workspace\stemsplayer\steamsplayer_new\app\ui\library_panel.py", line 253, in _show_cache_cleanup_dialog
-    cb.setData(entry_path)
-    ^^^^^^^^^^
-AttributeError: 'PySide6.QtWidgets.QCheckBox' object has no attribute 'setData'
 
-- en la vista de detalle lista las carpetas de cache, pero dice KEY=?, BPM=?
-El nombre de las carpetas en cache indican esos datos. Ej: "cache/F-89bpm/"
-- crea una carpeta docs/ y reestructura el README.md en diferentes archivos. El README.md debe seguir existiendo, pero deja que solo contenga información del proyecto, qué hace, cómo instalarlo, y indice de los diferentes documentos que irán en docs/ y qué información contienen. El resto de la información va en docs/
+-----------------------------------------
+
+
+
+Excelente, ahora procedamos con la etapa 3. Crear un theme basado en stemdeck que añada nuevos paneles. Por lo que no solo reemplazará el uso del theme, sino que reemplazará el main_window, ya que redistribuirá el contenido de la app e incluso añadirá nuevas funciones o secciones.
+La documentación de referencia es esta:
+@docs/new_theme/stemdeck-design-guide.md @docs/new_theme/layout.md @docs/new_theme/svgs.md @docs/new_theme/waveform-technical.md
+
+No buscamos replicarlo de manera exacta, ya que algunas cosas no nos interesas. pero hay muchas otras que sí queremos añadir como componentes o funciones nuevos, sin que eso implique perder las funciones existentes. por eso debemos planificar bien antes de proceder.
+Por ejemplo, si miramos el archivo layout.md hay algunas cosas que no nos interesan:
+- En el topbar el brand de stemdeck lo podríamos cambiar por un brand de stemsplayer. Stemdeck permite ingresar una url (por ejemplo desde youtube) para luego descargar la canción y generar los stems. Esa funcionalidad no nos interesa. Por lo que en el topbar donde tiene la sección de import from y el url input podríamos adaptarlo para indicar la ubicación actual de la librería, el botón para cambiar de librería y el botón para importar stems. Tampoco nos interesarían el botón split stems ni el bell de notificaciones. Pero el resto de botones (all, vocals, drims, etc.) si los podemos mantener.
+- en el sidebar podemos mantener el botón library, el botón favorites (añadiendo esa funcionalidad), y dejar el botón de trash, settings y help (pero que no hagan nada). Pero eliminemos el botón de supporters.
+- en el siderbar body: podemos mantener el search (la libreria que tenemos ya contaba con esa función). podemos añadir la función de sugerencias, tags, quitar el clear bin, añadir el catalog list (que en nuestro caso sería el contenido de la librería), En vez de añadir la creación de carpetas, las canciones de la librería que aparecerán en el cataloglist podrian agruparse por artistas, usando el icono de carpeta con el nombre del artista y permitiendo colapsar y descolapsar el contenido. Podríamos añadir una sección de Recent para poner las últimas canciones reproducidas, y añadir aquí también la sección de playlist que ya existe (con sus botones para crear, eliminar, ordenar, etc). Estas secciones del sidebar body también deberían poder colapsarse o descolapsarse presionando en el titulo de la sección. 
+- En el Main Area podemos mantener las metadata cards. Podemos usar el card de key y bpm para indicar el key y bpm que actualmente se colocan en la sección análisis. y al hacer click en esos card podemos desplegar un modal con la función de pitch shift y tempo respectivamente. La informaciónd e medidores del sistema lo podríamos colocar como un card en esta area también. 
+la sección Sections Ribbon la podemos eliminar directamente, no nos interesa. Si nos interesa los waveform tanto de los stems como en el reproductor de la canción, por lo que hay que añadir esa funcionalidad. El stems panel que usa stemdeck tiene menos funciones que el de nuestra app, por lo que hay que usar el estilo que propone, pero ampliarlo con las funciones que ya tenemos. por ejemplo, tiene un botón para mute y solo, pero nosotros también tenemos el botón fx. Stemdeck solo muestra el nombre, pero nosotros tenemos nombre y categoría. El slider de volumen que usa es más sencillo que el nuestro. es mejor mantener el nuestro (que es un slider con marcas de db). Nosotros también tenemos un slider para el paneo que hay que mantener. El botón de download button está interesante, lo podemos mantener añadiendo esa funcionalidad. Antes de los stems también deberiamos mantener el check para activar el metronomo y los componentes que se despliegan cuando está check.
+toda la sección de Waveform Panel la mantendría tal cual. Simplemente que lo colocaría contenido en un tab, y añadiría otra pestaña de tab que contendría la función de acordes y otra para el karaoke (funciones que ya existen y podríamos colocar acá)
+- Footer: Aquí podemos basicamente mantener todo, simplemente teniendo en consideración que nosotros tenemos botones adicionales en la reproducción (siguiente, anterior, etc) que funcionan cuando se ha seleccionado un playlist. Nosotros tenemos un menú contextual que hay que mantener en la sección de la libería del sidebar, pero justamente una de las opciones que tenemos disponibles es el botón exportar que stemdeck también lo añade en el footer para exportar, podemos también mantenerlo en el footer. Acá también se añade la posibilida de marcar una canción como favorito. También aquí se debe poder elegir los bpm y semitono. También tenemos que mantener en esta sección el slider para volumen del master, opción de count-in. el progress_bar con sus mensajes los podríamos mostrar en el footer. 
+Hay que analizar si las funciones y botones faltantes se colocarán en el footer o en alguna otra parte. (me refiero a chordpro_close_fullscreen_btn, chordpro_edit_fullscreen_btn, save_lib_btn, save_changes_btn, generate_chordpro_btn, edit_chordpro_btn, save_as_btn, toggle_live_btn, close_song_btn, add_to_setlist_btn, edit_key_btn, apply_tempo_btn, undo_btn, redo_btn, reset_btn, prev_btn, play_btn, stop_btn, next_btn y auto_play_btn)
+
+Otras observaciones:
+Parte de esta ampliación implicaría añadir campos al metadata de una canción (Ej. permitiendo definir una miniatura de la canción) o añadir información al config.json del sistema (Ej: añadir los favoritos de una librería y las reproducciones recientes, al igual que se almacenan los setlists de las librerías)
+Todas las funciones nuevas o cambios que hemos mencionado hasta ahora deberían ser parte del nuevo theme, y el código necesario debería estar contenido en archivos ordenados dentro de la carpeta theme, pero no deberían alterar el funcionamiento de la app por defecto. Entonces, parte del análisis a realizar es que las funciones existentes sean suficientemente flexibles para que las nuevas funciones puedan programarse por completo en el theme sin que eso afecte el funcionamiento por defecto de la app. 
+
+Debido a la extensión, realizaremos primero un análisis en 3 etapas, para luego comenzar a trabajar en el theme. 
+Etapa de análisis 1: 
+Revisar en detalle toda la documentación que hemos generado hasta ahora para entender a fondo el funcionamiento del theme StemDeck y la aplicación Stemsplayer (para ver qué funciones son compatibles y cuáles necesitan ser modificadas o reemplazadas.)
+Etapa de análisis 2:
+Analizar la propuesta del nuevo layout para el topbar, sidebar y footer a la luz de lo que ya se tiene en el sistema
+Etapa de análisis 3:
+Analizar la propuesta del nuevo layout para el main area a la luz de lo que ya se tiene en el sistema
+-
+Una vez completado el análisis, comenzaremos a crear el nuevo theme para Stemsplayer. Este theme deberá incluir todas las funciones y componentes que hemos mencionado hasta ahora, siguiendo el diseño propuesto por StemDeck, pero adaptado a las necesidades de Stemsplayer. 
+Etapa 3: 
+Una vez completado el theme, deberemos realizar pruebas exhaustivas para asegurarnos de que todas las funciones funcionan correctamente y que el theme es compatible con la aplicación. No solo hay que verificar que no haya errores, sino que también hay que verificar que la aplicación funciona como se espera y que el theme es compatible con la aplicación.
+
+Empecemos con la Etapa 1.
+Genera

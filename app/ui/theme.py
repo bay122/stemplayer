@@ -4,6 +4,10 @@ Sistema de temas centralizado para la aplicación.
 Todas las definiciones visuales (colores, bordes, tipografía)
 viven AQUÍ. Para crear un nuevo tema basta con instanciar Theme
 con valores distintos y llamar a apply_theme(window, mi_tema).
+
+Los widgets importan `current` (proxy dinámico) en lugar de
+`DARK_THEME` directamente, para reflejar cambios de tema en
+tiempo de ejecución sin necesidad de re-importar.
 """
 
 from dataclasses import dataclass, field
@@ -68,6 +72,10 @@ class Theme:
     SVG_ICON_ACTIVE: str = "#FFFFFF"
     SVG_ICON_DANGER: str = "#FF5555"
     SVG_ICON_SOLO: str = "#FFAA00"
+
+    # ── Overrides por theme ─────────────────────────────────
+    custom_qss: str = ""
+    icons_dir: str = ""
 
     # ══════════════════════════════════════════════════════════
     # Métodos de ayuda: generan QSS reutilizable
@@ -253,14 +261,37 @@ class Theme:
             QLabel {{
                 color: {self.TEXT_DEFAULT};
             }}
-        """
+        """ + self.custom_qss
 
 
 # ── Tema por defecto ───────────────────────────────────────
 DARK_THEME = Theme()
 
+# ── Proxy dinámico ─────────────────────────────────────────
+_current_theme = DARK_THEME
+
+
+class _ThemeProxy:
+    """Proxy que delega toda lectura de atributos al tema activo.
+
+    Los widgets importan ``current`` en vez de ``DARK_THEME``;
+    de esta forma, si se cambia el tema en tiempo de ejecución,
+    las referencias a ``theme.COLOR`` siguen funcionando sin
+    necesidad de re-importar.
+    """
+
+    def __getattr__(self, name):
+        if name.startswith("_"):
+            raise AttributeError(name)
+        return getattr(_current_theme, name)
+
+
+current = _ThemeProxy()
+
 
 # ── Función de aplicación ──────────────────────────────────
 def apply_theme(window, theme: Theme = DARK_THEME):
     """Aplica un tema completo a la ventana principal."""
+    global _current_theme
+    _current_theme = theme
     window.setStyleSheet(theme.global_stylesheet())

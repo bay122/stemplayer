@@ -8,7 +8,7 @@ from app.utils.constants import STEM_CATEGORIES
 from app.ui.svg_icon import svg_icon
 from app.ui.volume_slider import VolumeSlider
 from app.ui.pan_slider import PanSlider
-from app.ui.theme import DARK_THEME as theme
+from app.ui.theme import current as theme
 
 
 class StemItemWidget(QWidget):

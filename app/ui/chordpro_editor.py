@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont
-from app.ui.theme import DARK_THEME as theme
+from app.ui.theme import current as theme
 
 
 class ChordProParser:

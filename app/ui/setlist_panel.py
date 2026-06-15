@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal, Qt
 from app.data.config_manager import get_setlists, add_setlist, update_setlist, remove_setlist, get_library_path
 from app.ui.svg_icon import svg_icon
-from app.ui.theme import DARK_THEME as theme
+from app.ui.theme import current as theme
 from app.data.library_manager import get_library_songs, get_song_metadata
 
 
