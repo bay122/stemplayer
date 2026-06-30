@@ -48,7 +48,8 @@ class SongLoadingMixin:
             folder, self.state.mix_sr,
             pre_key=metadata.get("detected_key") if metadata else None,
             pre_bpm=metadata.get("detected_bpm") if metadata else None,
-            cache_folder=folder if source == "library" else None
+            cache_folder=folder if source == "library" else None,
+            stem_filters=self.config_mgr.get_stem_filters()
         )
         new_thread.progress.connect(self._on_loader_progress)
         new_thread.progress_pct.connect(self.progress_bar.setValue)
@@ -157,8 +158,9 @@ class SongLoadingMixin:
         self._rebuild_stems_ui()
         self.status_label.setText("Listo")
         self.progress_bar.setVisible(False)
+        self.bg_status_label.setVisible(False)
         self.close_song_btn.setVisible(True)
-        self.add_to_setlist_btn.setVisible(True)
+        self.chordpro_preview_widget.setVisible(False)
         self.threads.loader_thread = None
 
         self.state.history.clear()
@@ -200,19 +202,33 @@ class SongLoadingMixin:
             folder_path = os.path.join(self.lib_mgr.library_path, self.state.current_song_name)
             chopro_path = os.path.join(folder_path, f"{self.state.current_song_name}.chopro")
             sync_path = os.path.join(folder_path, f"{self.state.current_song_name}.sync.json")
-            if os.path.exists(chopro_path):
+
+            if not os.path.exists(sync_path) and os.path.exists(chopro_path) and metadata:
+                meta_sections = metadata.get("sections", [])
+                if meta_sections:
+                    from app.services import create_sync_file
+                    create_sync_file(meta_sections, sync_path)
+
+            if os.path.exists(chopro_path) or os.path.exists(sync_path):
                 self.live_display_widget.load_sync_data(chopro_path, sync_path)
+                self.live_display_widget.set_song_info(self.state.current_song_name, self.state.current_song_artist)
+                self.toggle_live_btn.setVisible(True)
                 self.toggle_live_btn.setEnabled(True)
+                self._edit_chordpro_action.setVisible(os.path.exists(chopro_path))
             else:
                 self.live_display_widget.reset()
+                self.toggle_live_btn.setVisible(False)
                 self.toggle_live_btn.setEnabled(False)
                 self.toggle_live_btn.setChecked(False)
+                self._edit_chordpro_action.setVisible(False)
                 self.center_stack.setCurrentIndex(0)
             self._load_chordpro_preview()
         else:
             self.live_display_widget.reset()
+            self.toggle_live_btn.setVisible(False)
             self.toggle_live_btn.setEnabled(False)
             self.toggle_live_btn.setChecked(False)
+            self._edit_chordpro_action.setVisible(False)
             self.center_stack.setCurrentIndex(0)
             self.chordpro_preview_widget.setVisible(False)
 
@@ -254,7 +270,8 @@ class SongLoadingMixin:
             song_folder, self.state.mix_sr,
             pre_key=meta.get("detected_key") if meta else None,
             pre_bpm=meta.get("detected_bpm") if meta else None,
-            cache_folder=song_folder
+            cache_folder=song_folder,
+            stem_filters=self.config_mgr.get_stem_filters()
         )
         new_thread.progress.connect(self._on_preload_progress)
         new_thread.finished_loading.connect(self._on_preload_finished)

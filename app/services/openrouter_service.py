@@ -4,6 +4,8 @@ import traceback
 import requests
 from PySide6.QtCore import QThread, Signal
 from app.services import _log
+from app.services.providers.base import AIProvider
+from app.services.providers import get_provider
 
 
 DEFAULT_OPENROUTER_MODEL = "anthropic/claude-sonnet-4.6"
@@ -30,25 +32,9 @@ def _clean_chordpro_response(content: str) -> str:
     return cleaned.strip()
 
 
-def _friendly_openrouter_error(status_code: int, response_text: str) -> str:
-    lowered = (response_text or "").lower()
-
-    if status_code in (401, 403):
-        return "La API key de OpenRouter no es valida o no tiene permisos para este modelo."
-    if status_code == 402:
-        return "OpenRouter no tiene credito disponible para completar esta solicitud."
-    if status_code == 404 and "no endpoints found" in lowered:
-        return "El modelo seleccionado no tiene proveedores disponibles en este momento."
-    if status_code >= 500:
-        return "OpenRouter devolvio un error temporal del servidor. Intenta nuevamente en unos minutos."
-    if "rate limit" in lowered or status_code == 429:
-        return "OpenRouter alcanzo el limite de solicitudes. Espera un momento e intenta otra vez."
-    return f"No se pudo generar el sheet de acordes (HTTP {status_code})."
-
-
-def build_openrouter_chordpro_prompt(song_title: str, artist: str, sections: list,
-                                     chords_by_section: dict, global_key: str, bpm: int,
-                                     lyrics_text: str = ""):
+def build_chordpro_prompt(song_title: str, artist: str, sections: list,
+                          chords_by_section: dict, global_key: str, bpm: int,
+                          lyrics_text: str = ""):
     sections_text = json.dumps(sections, ensure_ascii=False, separators=(',', ':'))
     chords_text = json.dumps(chords_by_section, ensure_ascii=False, separators=(',', ':'))
 
@@ -106,10 +92,10 @@ Devuelve SOLO el contenido del archivo .chopro, sin explicaciones ni bloques mar
 """
 
 
-def build_openrouter_sync_prompt(song_title: str, artist: str, sections: list, chordpro_content: str):
+def build_sync_prompt(song_title: str, artist: str, sections: list, chordpro_content: str):
     sections_text = json.dumps(sections, ensure_ascii=False, separators=(',', ':'))
 
-    return f"""Eres un experto en sincronización musical.
+    return f"""Eres un experto en sincronizacion musical.
 
 Cancion: {song_title}
 Artista: {artist}
@@ -123,18 +109,18 @@ ARCHIVO CHORDPRO GENERADO:
 ```
 
 Tarea:
-Analiza el archivo ChordPro generado y los timestamps de Whisper para crear un archivo de sincronización preciso.
+Analiza el archivo ChordPro generado y los timestamps de Whisper para crear un archivo de sincronizacion preciso.
 
 Reglas:
 - Extrae los nombres exactos de secciones del ChordPro (deben coincidir perfectamente).
 - Utiliza los timestamps de Whisper como referencia, pero optimizalos considerando:
   - La estructura musical del ChordPro
-  - La duración estimada de cada sección basada en la cantidad de líneas
+  - La duracion estimada de cada seccion basada en la cantidad de lineas
   - Asegurate de que la suma de duraciones sea coherente
-- Si el ChordPro tiene secciones que no están en Whisper, estima sus tiempos basándote en las duraciones musicales típicas.
+- Si el ChordPro tiene secciones que no estan en Whisper, estima sus tiempos basandote en las duraciones musicales tipicas.
 - Asegurate de que no haya solapamientos de tiempo entre secciones.
 
-FORMATO DE RESPUESTA (JSON válido, sin markdown, sin explicaciones):
+FORMATO DE RESPUESTA (JSON valido, sin markdown, sin explicaciones):
 {{
   "sections": [
     {{"label": "nombre de seccion", "start": 0.0, "end": 15.5}},
@@ -144,12 +130,12 @@ FORMATO DE RESPUESTA (JSON válido, sin markdown, sin explicaciones):
 
 IMPORTANTE:
 - Los nombres en "label" deben coincidir EXACTAMENTE con los nombres en el ChordPro.
-- Los valores "start" y "end" deben ser números con decimales (ej: 15.5, no "15.5").
+- Los valores "start" y "end" deben ser numeros con decimales (ej: 15.5, no "15.5").
 - Todos los nombres de secciones del ChordPro deben estar incluidos.
 """
 
 
-def _parse_openrouter_response(response_text: str) -> dict:
+def _parse_sync_response(response_text: str) -> dict:
     response_text = response_text.strip()
 
     try:
@@ -161,7 +147,7 @@ def _parse_openrouter_response(response_text: str) -> dict:
         data = json.loads(response_text)
 
         if "sections" not in data:
-            raise ValueError("No se encontró campo 'sections' en la respuesta")
+            raise ValueError("No se encontro campo 'sections' en la respuesta")
 
         _log("OpenRouter", "Sync.json parseado correctamente como JSON")
         return data
@@ -170,11 +156,12 @@ def _parse_openrouter_response(response_text: str) -> dict:
         _log("OpenRouter", f"Error al parsear sync.json: {e}")
         _log("OpenRouter", f"Respuesta recibida: {response_text[:200]}")
         raise RuntimeError(
-            "OpenRouter devolvió un formato inválido para sync.json. Intenta nuevamente."
+            "El proveedor de IA devolvio un formato invalido para sync.json. Intenta nuevamente."
         )
 
 
-def request_openrouter_chordpro(
+def request_ai_chordpro(
+    provider: AIProvider,
     song_title: str,
     artist: str,
     sections: list,
@@ -182,29 +169,17 @@ def request_openrouter_chordpro(
     global_key: str,
     bpm: int,
     api_key: str,
+    model: str,
     lyrics_text: str = "",
     use_web_search: bool = True,
-    preferred_model: str = DEFAULT_OPENROUTER_MODEL,
     progress_callback=None,
     cancelled_callback=None,
 ):
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://localhost/stemsplayer",
-        "X-Title": "Stem Player",
-    }
-
-    model_candidates = []
-    for candidate in [preferred_model, FALLBACK_OPENROUTER_MODEL]:
-        if candidate and candidate not in model_candidates:
-            model_candidates.append(candidate)
-
     _log("OpenRouter", "PRIMERA SOLICITUD: Generando archivo ChordPro...")
     if progress_callback:
         progress_callback("Generando sheet de acordes...")
 
-    prompt_chordpro = build_openrouter_chordpro_prompt(
+    prompt_chordpro = build_chordpro_prompt(
         song_title=song_title,
         artist=artist,
         sections=sections,
@@ -215,72 +190,57 @@ def request_openrouter_chordpro(
     )
 
     chordpro_content = None
-    last_response_text = ""
-    last_status_code = 0
+    last_error = None
 
-    for index, model_name in enumerate(model_candidates):
+    for attempt_label, attempt_model, attempt_web in _attempts(
+        provider, model, use_web_search, lyrics_text
+    ):
         if cancelled_callback and cancelled_callback():
             _log("OpenRouter", "Solicitud 1 cancelada antes de enviar")
             return "", {}
 
-        _log("OpenRouter", f"[Solicitud 1] Enviando con modelo '{model_name}'")
+        _log("OpenRouter", f"[Solicitud 1] Enviando con modelo '{attempt_model}' (web={attempt_web})")
+        if progress_callback:
+            progress_callback(f"Generando sheet de acordes ({attempt_label})...")
 
-        payload = {
-            "model": model_name,
-            "messages": [{"role": "user", "content": prompt_chordpro}],
-            "temperature": 0.2,
-            "max_tokens": 2500,
-        }
-        if use_web_search and not lyrics_text:
-            payload["plugins"] = [{"id": "web", "max_results": 5}]
-
-        response = requests.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers=headers,
-            json=payload,
-            timeout=(20, 300),
-        )
-
-        if cancelled_callback and cancelled_callback():
-            _log("OpenRouter", "Solicitud 1 cancelada después de recibir respuesta HTTP")
-            return "", {}
-
-        last_status_code = response.status_code
-        last_response_text = response.text
-        _log("OpenRouter", f"[Solicitud 1] HTTP {response.status_code} recibido para modelo '{model_name}'")
-
-        if response.status_code == 200:
-            response_data = response.json()
-            chordpro_content = response_data["choices"][0]["message"]["content"].strip()
+        try:
+            content = provider.chat_completion(
+                prompt=prompt_chordpro,
+                model=attempt_model,
+                api_key=api_key,
+                temperature=0.2,
+                max_tokens=2500,
+                use_web_search=attempt_web,
+                timeout=(20, 300),
+            )
+            chordpro_content = _clean_chordpro_response(content)
 
             if not chordpro_content:
-                _log("OpenRouter", "[Solicitud 1] Respuesta vacía")
-                no_endpoints = response.status_code == 404 and "no endpoints found" in response.text.lower()
-                if no_endpoints and index < len(model_candidates) - 1:
-                    continue
-                break
+                _log("OpenRouter", "[Solicitud 1] Respuesta vacia")
+                continue
 
             _log("OpenRouter", f"[Solicitud 1] ChordPro generado correctamente ({len(chordpro_content)} caracteres)")
             break
 
-        _log("OpenRouter", f"[Solicitud 1] Intento fallido con modelo '{model_name}'")
-        no_endpoints = response.status_code == 404 and "no endpoints found" in response.text.lower()
-        if no_endpoints and index < len(model_candidates) - 1:
+        except RuntimeError as e:
+            last_error = str(e)
+            _log("OpenRouter", f"[Solicitud 1] Intento fallido: {last_error}")
             continue
-        break
 
     if not chordpro_content:
-        raise RuntimeError(_friendly_openrouter_error(last_status_code, last_response_text))
+        if last_error:
+            raise RuntimeError(last_error)
+        raise RuntimeError("No se pudo generar el sheet de acordes.")
 
     if cancelled_callback and cancelled_callback():
         _log("OpenRouter", "Solicitud 2 cancelada antes de enviar")
         return "", {}
 
-    _log("OpenRouter", "SEGUNDA SOLICITUD: Generando archivo de sincronización...")
+    _log("OpenRouter", "SEGUNDA SOLICITUD: Generando archivo de sincronizacion...")
     if progress_callback:
-        progress_callback("Generando sincronización de secciones...")
+        progress_callback("Generando sincronizacion de secciones...")
 
-    prompt_sync = build_openrouter_sync_prompt(
+    prompt_sync = build_sync_prompt(
         song_title=song_title,
         artist=artist,
         sections=sections,
@@ -288,62 +248,65 @@ def request_openrouter_chordpro(
     )
 
     sync_data = None
-    for index, model_name in enumerate(model_candidates):
+    for attempt_label, attempt_model, attempt_web in _attempts(
+        provider, model, use_web_search, lyrics_text
+    ):
         if cancelled_callback and cancelled_callback():
             _log("OpenRouter", "Solicitud 2 cancelada antes de enviar")
             return chordpro_content, {}
 
-        _log("OpenRouter", f"[Solicitud 2] Enviando con modelo '{model_name}'")
+        _log("OpenRouter", f"[Solicitud 2] Enviando con modelo '{attempt_model}'")
+        if progress_callback:
+            progress_callback(f"Generando sincronizacion ({attempt_label})...")
 
-        payload = {
-            "model": model_name,
-            "messages": [{"role": "user", "content": prompt_sync}],
-            "temperature": 0.1,
-            "max_tokens": 1000,
-        }
+        try:
+            content = provider.chat_completion(
+                prompt=prompt_sync,
+                model=attempt_model,
+                api_key=api_key,
+                temperature=0.1,
+                max_tokens=1000,
+                use_web_search=False,
+                timeout=(20, 300),
+            )
 
-        response = requests.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers=headers,
-            json=payload,
-            timeout=(20, 300),
-        )
+            if not content:
+                _log("OpenRouter", "[Solicitud 2] Respuesta vacia")
+                continue
 
-        if cancelled_callback and cancelled_callback():
-            _log("OpenRouter", "Solicitud 2 cancelada después de recibir respuesta HTTP")
-            return chordpro_content, {}
-
-        last_status_code = response.status_code
-        last_response_text = response.text
-        _log("OpenRouter", f"[Solicitud 2] HTTP {response.status_code} recibido para modelo '{model_name}'")
-
-        if response.status_code == 200:
-            response_data = response.json()
-            sync_response = response_data["choices"][0]["message"]["content"].strip()
-
-            if not sync_response:
-                _log("OpenRouter", "[Solicitud 2] Respuesta vacía")
-                no_endpoints = response.status_code == 404 and "no endpoints found" in response.text.lower()
-                if no_endpoints and index < len(model_candidates) - 1:
-                    continue
-                break
-
-            sync_data = _parse_openrouter_response(sync_response)
+            sync_data = _parse_sync_response(content)
             _log("OpenRouter", f"[Solicitud 2] Sync.json generado correctamente ({len(sync_data.get('sections', []))} secciones)")
 
             if progress_callback:
-                progress_callback("Sincronización completada.")
+                progress_callback("Sincronizacion completada.")
 
             return chordpro_content, sync_data
 
-        _log("OpenRouter", f"[Solicitud 2] Intento fallido con modelo '{model_name}'")
-        no_endpoints = response.status_code == 404 and "no endpoints found" in response.text.lower()
-        if no_endpoints and index < len(model_candidates) - 1:
+        except RuntimeError as e:
+            last_error = str(e)
+            _log("OpenRouter", f"[Solicitud 2] Intento fallido: {last_error}")
             continue
-        break
 
-    _log("OpenRouter", "[Solicitud 2] No se pudo generar sync.json, devolviendo ChordPro sin sincronización")
+    _log("OpenRouter", "[Solicitud 2] No se pudo generar sync.json, devolviendo ChordPro sin sincronizacion")
     return chordpro_content, {"sections": []}
+
+
+def _attempts(provider, model, use_web_search, lyrics_text):
+    candidates = [model]
+    if provider.id == "openrouter":
+        if FALLBACK_OPENROUTER_MODEL not in candidates:
+            candidates.append(FALLBACK_OPENROUTER_MODEL)
+
+    web_variants = [False]
+    if use_web_search and not lyrics_text:
+        web_variants = [True, False]
+
+    for m in candidates:
+        for w in web_variants:
+            label = m
+            if w:
+                label = f"{m} + web"
+            yield label, m, w
 
 
 class OpenRouterLLMThread(QThread):
@@ -354,6 +317,7 @@ class OpenRouterLLMThread(QThread):
 
     def __init__(
         self,
+        provider: AIProvider,
         song_title: str,
         artist: str,
         sections: list,
@@ -361,11 +325,12 @@ class OpenRouterLLMThread(QThread):
         global_key: str,
         bpm: int,
         api_key: str,
+        model: str = None,
         lyrics_text: str = "",
         use_web_search: bool = True,
-        preferred_model: str = DEFAULT_OPENROUTER_MODEL,
     ):
         super().__init__()
+        self.provider = provider
         self.song_title = song_title
         self.artist = artist
         self.sections = sections
@@ -373,9 +338,9 @@ class OpenRouterLLMThread(QThread):
         self.global_key = global_key
         self.bpm = bpm
         self.api_key = api_key
+        self.model = model or provider.default_model
         self.lyrics_text = (lyrics_text or "").strip()
         self.use_web_search = use_web_search
-        self.preferred_model = preferred_model or DEFAULT_OPENROUTER_MODEL
         self._is_cancelled = False
 
     def cancel(self):
@@ -390,7 +355,8 @@ class OpenRouterLLMThread(QThread):
             self.progress.emit("Preparando datos para generar el sheet de acordes...")
             _log("OpenRouter", f"Inicio de generacion para '{self.song_title}'")
 
-            chordpro, sync_data = request_openrouter_chordpro(
+            chordpro, sync_data = request_ai_chordpro(
+                provider=self.provider,
                 song_title=self.song_title,
                 artist=self.artist,
                 sections=self.sections,
@@ -398,9 +364,9 @@ class OpenRouterLLMThread(QThread):
                 global_key=self.global_key,
                 bpm=self.bpm,
                 api_key=self.api_key,
+                model=self.model,
                 lyrics_text=self.lyrics_text,
                 use_web_search=self.use_web_search,
-                preferred_model=self.preferred_model,
                 progress_callback=self.progress.emit,
                 cancelled_callback=lambda: self._is_cancelled,
             )

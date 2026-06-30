@@ -7,7 +7,6 @@ from app.audio.pitch_tempo import PitchTempoThread
 from app.audio.playback import PlaybackThread
 from app.audio.exporter import ExportThread
 from app.services.chord_analysis import ChordAnalysisThread
-from app.services.openrouter_service import OpenRouterLLMThread
 
 
 class ThreadManager:
@@ -19,8 +18,9 @@ class ThreadManager:
         self.pitch_tempo_thread: PitchTempoThread | None = None
         self.export_thread: ExportThread | None = None
         self.chord_analysis_thread: ChordAnalysisThread | None = None
-        self.openrouter_thread: OpenRouterLLMThread | None = None
+        self.openrouter_thread: "QThread | None" = None
         self.preloader_thread: StemLoaderThread | None = None
+        self.sync_ai_thread: "QThread | None" = None
 
     # ------------------------------------------------------------------
     # Helpers internos
@@ -82,12 +82,14 @@ class ThreadManager:
 
     def cancel_all(self):
         for attr in ['preloader_thread', 'loader_thread', 'pitch_tempo_thread',
-                      'export_thread', 'chord_analysis_thread', 'openrouter_thread']:
+                      'export_thread', 'chord_analysis_thread', 'openrouter_thread',
+                      'sync_ai_thread']:
             self._safe_stop(attr)
 
     def cleanup_all(self):
         """Detiene TODOS los hilos (incluyendo playback). Úselo en closeEvent."""
         for attr in ['playback_thread', 'preloader_thread', 'loader_thread',
                       'pitch_tempo_thread', 'export_thread',
-                      'chord_analysis_thread', 'openrouter_thread']:
+                      'chord_analysis_thread', 'openrouter_thread',
+                      'sync_ai_thread']:
             self._safe_stop(attr)

@@ -23,7 +23,8 @@ class StemLoaderThread(QThread):
     error = Signal(str)
 
     def __init__(self, folder_path: str, mix_sr: int = 44100, pre_key: str = None,
-                 pre_bpm: int = None, cache_folder: str = None):
+                 pre_bpm: int = None, cache_folder: str = None,
+                 stem_filters: dict = None):
         super().__init__()
         self.folder_path = folder_path
         self.mix_sr = mix_sr
@@ -31,6 +32,11 @@ class StemLoaderThread(QThread):
         self.pre_bpm = pre_bpm
         self.cache_folder = cache_folder
         self._is_cancelled = False
+        self.stem_filters = stem_filters or {
+            "click_patterns": ["click", "metro"],
+            "guide_patterns": ["guide", "cue", "guia"],
+            "no_fx_patterns": ["drum", "drums", "bateria", "batería"],
+        }
 
     def cancel(self):
         self._is_cancelled = True
@@ -41,9 +47,9 @@ class StemLoaderThread(QThread):
         try:
             def file_sort_key(f):
                 fname = _strip_accents(f.lower())
-                if any(x in fname for x in ["click", "metro"]):
+                if any(x in fname for x in self.stem_filters["click_patterns"]):
                     return 0
-                if any(x in fname for x in ["guide", "cue", "guia"]):
+                if any(x in fname for x in self.stem_filters["guide_patterns"]):
                     return 1
                 return 2
 
@@ -94,14 +100,14 @@ class StemLoaderThread(QThread):
 
                 original_audio = audio
 
-                is_click = any(x in fname for x in ["click", "metro"])
+                is_click = any(x in fname for x in self.stem_filters["click_patterns"])
                 if is_click:
                     with stems_lock:
                         if click_audio_data[0] is None:
                             click_audio_data[0] = audio
 
-                muted = is_click or any(x in fname for x in ["guide", "cue", "guia"])
-                fx_enabled = not any(x in fname for x in ["drum", "drums", "bateria", "batería"])
+                muted = is_click or any(x in fname for x in self.stem_filters["guide_patterns"])
+                fx_enabled = not any(x in fname for x in self.stem_filters["no_fx_patterns"])
 
                 with stems_lock:
                     stems[stem_name] = {

@@ -11,7 +11,7 @@ def _load_whisper_model_class():
         return None
 
 
-def transcribe_guide_audio(guide_audio: np.ndarray, mix_sr: int, language: str = "es", model_size: str = "small"):
+def transcribe_guide_audio(guide_audio: np.ndarray, mix_sr: int, language: str = "es", model_size: str = "medium"):
     _log("Whisper", f"Iniciando transcripción")
     whisper_model_cls = _load_whisper_model_class()
     if whisper_model_cls is None:

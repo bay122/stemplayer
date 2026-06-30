@@ -124,12 +124,14 @@ class StemItemWidget(QWidget):
         self.up_btn = QPushButton()
         self.up_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-caret-up.svg"), theme.SVG_ICON_ACTIVE))
         self.up_btn.setFixedSize(28, 17)
+        self.up_btn.setToolTip("Mover este stem hacia arriba")
         self.up_btn.clicked.connect(lambda: self.move_up_requested.emit(self.stem_name))
         reorder_layout.addWidget(self.up_btn)
 
         self.down_btn = QPushButton()
         self.down_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-caret-down.svg"), theme.SVG_ICON_ACTIVE))
         self.down_btn.setFixedSize(28, 17)
+        self.down_btn.setToolTip("Mover este stem hacia abajo")
         self.down_btn.clicked.connect(lambda: self.move_down_requested.emit(self.stem_name))
         reorder_layout.addWidget(self.down_btn)
 
@@ -138,6 +140,7 @@ class StemItemWidget(QWidget):
         self.delete_btn = QPushButton()
         self.delete_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-eraser.svg"), theme.SVG_ICON_DANGER))
         self.delete_btn.setFixedSize(34, 34)
+        self.delete_btn.setToolTip("Eliminar este stem de la mezcla")
         self.delete_btn.clicked.connect(lambda: self.delete_requested.emit(self.stem_name))
         layout.addWidget(self.delete_btn, 0)
 

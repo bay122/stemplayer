@@ -11,6 +11,7 @@ class LayoutMixin:
         else:
             self.center_stack.setCurrentIndex(0)
             self.toggle_live_btn.setText("Karaoke")
+            self.live_display_widget.reset()
 
     def _toggle_left_panel(self):
         self.left_panel_collapsed = not self.left_panel_collapsed
@@ -22,10 +23,16 @@ class LayoutMixin:
         else:
             self.lib_panel.setMaximumWidth(340)
             self.lib_panel.setMinimumWidth(340)
-            self.collapse_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-h-collapse.svg"), "#888888"))
+            self.collapse_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-h-expand.svg"), "#888888"))
             self.collapse_btn.setToolTip("Contraer panel izquierdo")
 
     def closeEvent(self, event):
+        self.live_display_widget.reset()
+        pt = self.threads.playback_thread
+        if pt:
+            pt.stop()
+            pt.wait(6000)
+            self.threads.safe_replace('playback_thread', None)
         self.threads.cleanup_all()
         event.accept()
 
@@ -67,7 +74,18 @@ class LayoutMixin:
         self.current_time_label.setText("00:00")
         self.total_time_label.setText("00:00")
         self.close_song_btn.setVisible(False)
-        self.add_to_setlist_btn.setVisible(False)
+        self.save_lib_btn.setVisible(False)
+        self.save_changes_btn.setVisible(False)
+        self.generate_chordpro_btn.setVisible(False)
+        self.more_btn.setVisible(False)
+        self._save_as_action.setVisible(False)
+        self._edit_chordpro_action.setVisible(False)
+        self._regenerate_sync_action.setVisible(False)
+        self._edit_sync_action.setVisible(False)
+        self._add_to_setlist_action.setVisible(False)
+        self.toggle_live_btn.setVisible(False)
+        self.progress_bar.setVisible(False)
+        self.bg_status_label.setVisible(False)
         self.chordpro_path = None
         self.chordpro_fullscreen_text.clear()
         self.chordpro_preview_widget.setVisible(False)

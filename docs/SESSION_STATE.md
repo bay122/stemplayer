@@ -152,7 +152,7 @@ app/ext/themes/stemdeck/
     ├── fad-next.svg (chevron right)
     ├── fad-edit.svg (pencil)
     ├── fad-preset-ab.svg (loop arrows)
-    ├── fad-h-expand.svg / fad-h-collapse.svg (hamburger)
+    ├── fad-h-expand.svg / fad-h-expand.svg (hamburger)
     ├── fad-saveas.svg
     ├── fad-history.svg (clock)
     ├── fad-file-code.svg

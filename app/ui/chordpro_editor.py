@@ -97,11 +97,19 @@ class ChordProParser:
             chord_line = ""
             lyric_line = ""
 
-            for part in parts:
+            for i, part in enumerate(parts):
                 if part.startswith("[") and part.endswith("]"):
                     chord = part[1:-1]
                     chord_line += f"<span style='color: #4CAF50; font-weight: bold;'>{chord}</span>"
-                    lyric_line += "<span style='visibility: hidden;'>" + ("_" * len(chord)) + "</span>"
+                    prev_part = parts[i-1] if i > 0 else ""
+                    next_part = parts[i+1] if i+1 < len(parts) else ""
+                    prev_cont = bool(prev_part) and not prev_part[-1].isspace()
+                    next_cont = bool(next_part) and not next_part[0].isspace()
+                    if prev_cont and next_cont:
+                        lyric_line += f"<span style='color: rgba(128,128,128,0.35);'>-</span>"
+                        lyric_line += f"<span style='visibility: hidden;'>{' ' * max(0, len(chord)-1)}</span>"
+                    else:
+                        lyric_line += "<span style='visibility: hidden;'>" + ("_" * len(chord)) + "</span>"
                 else:
                     safe_part = part.replace('<', '&lt;').replace('>', '&gt;')
                     chord_line += "<span style='visibility: hidden;'>" + safe_part + "</span>"
@@ -141,6 +149,7 @@ class ChordProEditor(QWidget):
         for chord in common_chords:
             btn = QPushButton(chord)
             btn.setFixedSize(30, 30)
+            btn.setToolTip(f"Insertar acorde {chord}")
             btn.setStyleSheet(f"background-color: {theme.BG_TERTIARY}; color: {theme.TEXT_PRIMARY};")
             btn.clicked.connect(lambda c=False, ch=chord: self.insert_chord(ch))
             toolbar.addWidget(btn)
@@ -148,11 +157,13 @@ class ChordProEditor(QWidget):
         toolbar.addStretch()
 
         self.export_pdf_btn = QPushButton("Exportar PDF")
+        self.export_pdf_btn.setToolTip("Exportar la hoja de acordes a PDF")
         self.export_pdf_btn.setStyleSheet(f"background-color: {theme.ACCENT_INFO}; color: {theme.TEXT_PRIMARY}; padding: 5px 15px; font-weight: bold;")
         self.export_pdf_btn.clicked.connect(self.export_pdf)
         toolbar.addWidget(self.export_pdf_btn)
 
         save_btn = QPushButton("Guardar Archivo")
+        save_btn.setToolTip("Guardar el archivo ChordPro en disco")
         save_btn.setStyleSheet(f"background-color: {theme.ACCENT_SUCCESS}; color: {theme.TEXT_PRIMARY}; padding: 5px 15px; font-weight: bold;")
         save_btn.clicked.connect(self.save_file)
         toolbar.addWidget(save_btn)

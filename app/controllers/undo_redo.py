@@ -136,9 +136,13 @@ class UndoRedoMixin:
     def _update_save_buttons(self):
         self.save_lib_btn.setVisible(False)
         self.save_changes_btn.setVisible(False)
-        self.save_as_btn.setVisible(False)
         self.generate_chordpro_btn.setVisible(False)
-        self.edit_chordpro_btn.setVisible(False)
+        self.more_btn.setVisible(False)
+        self._save_as_action.setVisible(False)
+        self._edit_chordpro_action.setVisible(False)
+        self._regenerate_sync_action.setVisible(False)
+        self._edit_sync_action.setVisible(False)
+        self._add_to_setlist_action.setVisible(False)
 
         btn_style = theme.action_button_qss()
 
@@ -147,15 +151,19 @@ class UndoRedoMixin:
             if self.state.has_unsaved_changes:
                 self.save_changes_btn.setStyleSheet(btn_style)
 
-            self.save_as_btn.setVisible(True)
+            self.more_btn.setVisible(True)
+            self._save_as_action.setVisible(True)
+            self._add_to_setlist_action.setVisible(True)
+            self._edit_sync_action.setVisible(True)
+            self._regenerate_sync_action.setVisible(True)
 
             chopro_path = os.path.join(self.lib_mgr.library_path, self.state.current_song_name, f"{self.state.current_song_name}.chopro")
             if os.path.exists(chopro_path):
-                self.generate_chordpro_btn.setText("Regenerar Sheet de acordes")
-                self.edit_chordpro_btn.setVisible(True)
+                self.generate_chordpro_btn.setText("Regenerar Sheet")
+                self._edit_chordpro_action.setVisible(True)
             else:
-                self.generate_chordpro_btn.setText("Generar Sheet de acordes")
-                self.edit_chordpro_btn.setVisible(False)
+                self.generate_chordpro_btn.setText("Generar Sheet")
+                self._edit_chordpro_action.setVisible(False)
 
             self.generate_chordpro_btn.setVisible(True)
         elif self.state.current_song_source == "folder":
@@ -165,4 +173,3 @@ class UndoRedoMixin:
             self.save_lib_btn.setVisible(False)
             self.save_changes_btn.setVisible(False)
             self.generate_chordpro_btn.setVisible(False)
-            self.edit_chordpro_btn.setVisible(False)

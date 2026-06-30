@@ -99,6 +99,10 @@ class PlaybackMixin:
                 if self.center_stack.currentIndex() == 1:
                     self.live_display_widget.update_position(current_seconds)
 
+                fullscreen = getattr(self.live_display_widget, '_fullscreen_window', None)
+                if fullscreen and fullscreen.isVisible():
+                    fullscreen.update_progress(current_seconds, total_seconds)
+
     def _on_playback_preview(self, value: int):
         if not self.state.stems:
             return

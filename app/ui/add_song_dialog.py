@@ -44,11 +44,13 @@ class AddSongToSetlistDialog(QDialog):
         btn_layout.addStretch()
 
         self.cancel_btn = QPushButton("Cancelar")
+        self.cancel_btn.setToolTip("Cancelar y cerrar")
         self.cancel_btn.clicked.connect(self.reject)
         btn_layout.addWidget(self.cancel_btn)
 
         self.add_btn = QPushButton("Añadir")
         self.add_btn.setDefault(True)
+        self.add_btn.setToolTip("Añadir la canción seleccionada al setlist")
         self.add_btn.clicked.connect(self._on_add_clicked)
         btn_layout.addWidget(self.add_btn)
 
