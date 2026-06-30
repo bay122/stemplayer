@@ -78,3 +78,8 @@ Thumbs.db
 # Audio
 *.wav
 *.mp3
+
+# Stemplayer
+.env
+config.json
+OTROS/*
