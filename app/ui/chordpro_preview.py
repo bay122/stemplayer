@@ -54,7 +54,7 @@ class ChordProPreviewWidget(QWidget):
         self.live_btn = QPushButton()
         self.live_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-microphone.svg")))
         self.live_btn.setFixedSize(24, 24)
-        self.live_btn.setToolTip("Activar modo Karaoke/Live")
+        self.live_btn.setToolTip("Activar modo Live Chords")
         self.live_btn.clicked.connect(self._on_live_clicked)
         button_row.addWidget(self.live_btn)
 

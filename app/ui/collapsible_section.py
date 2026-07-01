@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSizePolicy
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSizePolicy, QScrollArea
 from PySide6.QtCore import Qt, QSize, Signal
 from app.ui.theme import current as theme
 
@@ -42,6 +42,18 @@ class CollapsibleSection(QWidget):
 		hl.addWidget(self._title, 1)
 
 		self._layout.addWidget(self._header)
+
+		self._content_scroll = QScrollArea()
+		self._content_scroll.setWidgetResizable(True)
+		self._content_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+		self._content_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+		self._content_scroll.setFrameShape(QScrollArea.NoFrame)
+		self._content_scroll.setStyleSheet(f"""
+			QScrollArea {{
+				background-color: transparent;
+				border: none;
+			}}
+		""")
 		self._content_container = QWidget()
 		self._content_container.setStyleSheet(f"""
 			QWidget {{
@@ -51,7 +63,8 @@ class CollapsibleSection(QWidget):
 		self._content_layout = QVBoxLayout(self._content_container)
 		self._content_layout.setContentsMargins(0, 4, 0, 0)
 		self._content_layout.setSpacing(4)
-		self._layout.addWidget(self._content_container, 1)
+		self._content_scroll.setWidget(self._content_container)
+		self._layout.addWidget(self._content_scroll, 1)
 
 		self._header.mousePressEvent = self._toggle
 
@@ -72,7 +85,7 @@ class CollapsibleSection(QWidget):
 	def set_collapsed(self, collapsed: bool):
 		self._collapsed = collapsed
 		self._arrow.setText("▶" if collapsed else "▼")
-		self._content_container.setVisible(not collapsed)
+		self._content_scroll.setVisible(not collapsed)
 		if collapsed:
 			self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
 		else:
@@ -81,6 +94,9 @@ class CollapsibleSection(QWidget):
 		if self._config_mgr:
 			self._config_mgr.set_collapsed_section(self._section_id, collapsed)
 		self.toggled.emit(collapsed)
+
+	def updateContentMinimunHeight(self, height: int):
+		self._content_scroll.setMinimumHeight(height)
 
 	def minimumSizeHint(self):
 		return QSize(0, 26)

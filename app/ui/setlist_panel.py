@@ -47,28 +47,28 @@ class SetlistPanel(QWidget):
 
 		reorder_btns = QVBoxLayout()
 		self.btn_up = QPushButton()
-		self.btn_up.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-caret-up.svg"), "#FFFFFF"))
+		self.btn_up.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-caret-up.svg"), theme.SVG_ICON_ACTIVE))
 		self.btn_up.setFixedSize(28, 28)
 		self.btn_up.setToolTip("Mover canción hacia arriba en el setlist")
 		self.btn_up.clicked.connect(self._move_up)
 		reorder_btns.addWidget(self.btn_up)
 
 		self.btn_down = QPushButton()
-		self.btn_down.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-caret-down.svg"), "#FFFFFF"))
+		self.btn_down.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-caret-down.svg"), theme.SVG_ICON_ACTIVE))
 		self.btn_down.setFixedSize(28, 28)
 		self.btn_down.setToolTip("Mover canción hacia abajo en el setlist")
 		self.btn_down.clicked.connect(self._move_down)
 		reorder_btns.addWidget(self.btn_down)
 
 		self.btn_add_to_setlist = QPushButton()
-		self.btn_add_to_setlist.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-plus.svg"), "#FFFFFF"))
+		self.btn_add_to_setlist.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-plus.svg"), theme.SVG_ICON_ACTIVE))
 		self.btn_add_to_setlist.setFixedSize(28, 28)
 		self.btn_add_to_setlist.setToolTip("Añadir canción al setlist")
 		self.btn_add_to_setlist.clicked.connect(self._add_song_to_setlist_dialog)
 		reorder_btns.addWidget(self.btn_add_to_setlist)
 
 		self.btn_close_setlist = QPushButton()
-		self.btn_close_setlist.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-close-x.svg"), "#FF5555"))
+		self.btn_close_setlist.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-close-x.svg"), theme.SVG_ICON_DANGER))
 		self.btn_close_setlist.setFixedSize(28, 28)
 		self.btn_close_setlist.setToolTip("Deseleccionar setlist")
 		self.btn_close_setlist.clicked.connect(self.deselect_setlist)
@@ -83,28 +83,28 @@ class SetlistPanel(QWidget):
 		setlist_btns.setSpacing(4)
 
 		self.new_btn = QPushButton()
-		self.new_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-plus.svg"), "#FFFFFF"))
+		self.new_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-plus.svg"), theme.SVG_ICON_ACTIVE))
 		self.new_btn.setFixedSize(28, 28)
 		self.new_btn.setToolTip("Nuevo setlist")
 		self.new_btn.clicked.connect(self._create_setlist)
 		setlist_btns.addWidget(self.new_btn)
 
 		self.edit_btn = QPushButton()
-		self.edit_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-pen.svg"), "#FFFFFF"))
+		self.edit_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-pen.svg"), theme.SVG_ICON_ACTIVE))
 		self.edit_btn.setFixedSize(28, 28)
 		self.edit_btn.setToolTip("Renombrar setlist")
 		self.edit_btn.clicked.connect(self._edit_setlist)
 		setlist_btns.addWidget(self.edit_btn)
 
 		self.del_btn = QPushButton()
-		self.del_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-eraser.svg"), "#FF5555"))
+		self.del_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-eraser.svg"), theme.SVG_ICON_DANGER))
 		self.del_btn.setFixedSize(28, 28)
 		self.del_btn.setToolTip("Eliminar setlist")
 		self.del_btn.clicked.connect(self._delete_setlist)
 		setlist_btns.addWidget(self.del_btn)
 
 		self.save_btn = QPushButton()
-		self.save_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-save.svg"), "#FFFFFF"))
+		self.save_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-save.svg"), theme.SVG_ICON_ACTIVE))
 		self.save_btn.setFixedSize(28, 28)
 		self.save_btn.setToolTip("Guardar setlist")
 		self.save_btn.clicked.connect(self._save_changes)
@@ -367,8 +367,8 @@ class SetlistPanel(QWidget):
 
 			if song_name == current_song:
 				if is_playing and blink:
-					item.setIcon(svg_icon(os.path.join(icons_dir, "fad-speaker.svg"), "#00FF00"))
+					item.setIcon(svg_icon(os.path.join(icons_dir, "fad-speaker.svg"), theme.SVG_ICON_PLAYING))
 				else:
-					item.setIcon(svg_icon(os.path.join(icons_dir, "fad-speaker.svg"), "#0078D7"))
+					item.setIcon(svg_icon(os.path.join(icons_dir, "fad-speaker.svg"), theme.ACCENT_PRIMARY))
 			else:
-				item.setIcon(svg_icon(os.path.join(icons_dir, "fad-speaker.svg"), "#444444"))
+				item.setIcon(svg_icon(os.path.join(icons_dir, "fad-speaker.svg"), theme.BORDER))

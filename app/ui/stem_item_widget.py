@@ -179,7 +179,7 @@ class StemItemWidget(QWidget):
                 selection-background-color: {theme.ACCENT_PRIMARY};
             }}
             QPushButton {{
-                background-color: #333333;
+                background-color: {theme.BUTTON_BG};
                 border: 1px solid {theme.BORDER};
                 border-radius: {theme.BORDER_RADIUS_SM};
                 color: {theme.TEXT_PRIMARY};
@@ -238,7 +238,7 @@ class StemItemWidget(QWidget):
         else:
             self.fx_btn.setStyleSheet(
                 f"color: {theme.TEXT_SECONDARY}; font-weight: bold; "
-                f"background-color: #333333; border: 1px solid {theme.BORDER}; padding: 0px; font-size: 11px;"
+                f"background-color: {theme.BUTTON_BG}; border: 1px solid {theme.BORDER}; padding: 0px; font-size: 11px;"
             )
         self.fx_toggled.emit(self.stem_name, checked)
 

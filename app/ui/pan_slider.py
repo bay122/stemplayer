@@ -5,6 +5,8 @@ from PySide6.QtGui import QPainter, QPen, QFont, QColor
 from PySide6.QtCore import QRect
 from PySide6.QtSvg import QSvgRenderer
 
+from app.ui.theme import current as theme
+
 
 class PanSlider(QWidget):
     """Custom horizontal pan slider using fad-sliderhandle-2-white.svg."""
@@ -52,16 +54,16 @@ class PanSlider(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        painter.fillRect(self.rect(), QColor(42, 42, 42))
+        painter.fillRect(self.rect(), QColor(theme.BG_TERTIARY))
 
         groove_rect = QRect(10, self.height() // 2 - 2, self.width() - 20, 4)
-        painter.fillRect(groove_rect, QColor(68, 68, 68))
+        painter.fillRect(groove_rect, QColor(theme.SLIDER_GROOVE))
 
         center_x = self.width() // 2
-        painter.setPen(QPen(QColor(100, 100, 100), 2))
+        painter.setPen(QPen(QColor(theme.SLIDER_CENTER), 2))
         painter.drawLine(center_x, groove_rect.top() - 2, center_x, groove_rect.bottom() + 2)
 
-        painter.setPen(QPen(QColor(150, 150, 150), 1))
+        painter.setPen(QPen(QColor(theme.SLIDER_TEXT), 1))
         painter.setFont(QFont("Arial", 7))
         painter.drawText(2, self.height() // 2 + 5, "L")
         painter.drawText(self.width() - 8, self.height() // 2 + 5, "R")
@@ -72,8 +74,8 @@ class PanSlider(QWidget):
         if self.handle_icon:
             self.handle_icon.render(painter, handle_rect)
         else:
-            painter.fillRect(handle_rect, QColor(0, 120, 215))
-            painter.setPen(QPen(QColor(255, 255, 255), 1))
+            painter.fillRect(handle_rect, QColor(theme.ACCENT_PRIMARY))
+            painter.setPen(QPen(QColor(theme.TEXT_PRIMARY), 1))
             painter.drawRect(handle_rect)
 
     def mousePressEvent(self, event):

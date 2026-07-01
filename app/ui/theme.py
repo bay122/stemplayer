@@ -15,63 +15,79 @@ from dataclasses import dataclass, field
 
 @dataclass(frozen=True)
 class Theme:
-    # ── Fondos ──────────────────────────────────────────────
-    BG_PRIMARY: str = "#121212"
-    BG_SECONDARY: str = "#1E1E1E"
-    BG_TERTIARY: str = "#2A2A2A"
-    BG_DARK: str = "#111111"
-    BG_INPUT: str = "#1E1E1E"
-    BG_EDITOR: str = "#1e1e1e"
-    BG_MENU: str = "#2A2A2A"
+    # ── Fondos (paleta StemDeck-inspired) ────────────────────
+    BG_PRIMARY: str = "#0b0f12"
+    BG_SECONDARY: str = "#131a1f"
+    BG_TERTIARY: str = "#1d262d"
+    BG_DARK: str = "#0f1418"
+    BG_INPUT: str = "#182026"
+    BG_EDITOR: str = "#0f1418"
+    BG_MENU: str = "#131a1f"
 
     # ── Texto ───────────────────────────────────────────────
-    TEXT_PRIMARY: str = "#FFFFFF"
-    TEXT_DEFAULT: str = "#CCCCCC"
-    TEXT_SECONDARY: str = "#888888"
-    TEXT_MUTED: str = "#AAAAAA"
-    TEXT_EDITOR: str = "#d4d4d4"
-    TEXT_DISABLED: str = "#666666"
+    TEXT_PRIMARY: str = "#e8ecf0"
+    TEXT_DEFAULT: str = "#c2c9d1"
+    TEXT_SECONDARY: str = "#8a939c"
+    TEXT_MUTED: str = "#5d666e"
+    TEXT_EDITOR: str = "#c2c9d1"
+    TEXT_DISABLED: str = "#5d666e"
 
-    # ── Acentos ─────────────────────────────────────────────
+    # ── Acentos (paleta StemDeck-inspired) ──────────────────
     ACCENT_PRIMARY: str = "#0078D7"
-    ACCENT_PRIMARY_HOVER: str = "#006ABB"
+    ACCENT_PRIMARY_HOVER: str = "#1a8de0"
     ACCENT_CYAN: str = "#00BFFF"
-    ACCENT_SUCCESS: str = "#4CAF50"
-    ACCENT_DANGER: str = "#F44336"
-    ACCENT_DANGER_ALT: str = "#FF5555"
-    ACCENT_WARNING: str = "#FFC107"
+    ACCENT_SUCCESS: str = "#4caf7d"
+    ACCENT_SUCCESS_HOVER: str = "#5dc78f"
+    ACCENT_DANGER: str = "#d65a4a"
+    ACCENT_DANGER_ALT: str = "#ef4444"
+    ACCENT_DANGER_ALT_HOVER: str = "#ff5555"
+    ACCENT_WARNING: str = "#FFAA00"
     ACCENT_INFO: str = "#2196F3"
-    ACCENT_PURPLE: str = "#5555AA"
+    ACCENT_INFO_HOVER: str = "#42A5F5"
+    ACCENT_PURPLE: str = "#a855f7"
     ACCENT_SOLO: str = "#FFAA00"
+    ACCENT_GOLD: str = "#f4b740"
 
     # ── Bordes ──────────────────────────────────────────────
-    BORDER: str = "#444444"
-    BORDER_LIGHT: str = "#555555"
-    BORDER_DARK: str = "#333333"
-    BORDER_ALT: str = "#3e3e42"
-    BORDER_WIDGET: str = "#3A3A3A"
+    BORDER: str = "#232c34"
+    BORDER_LIGHT: str = "#2e3942"
+    BORDER_DARK: str = "#1d262d"
+    BORDER_ALT: str = "#2e3942"
+    BORDER_WIDGET: str = "#232c34"
 
-    # ── Geometría ───────────────────────────────────────────
-    BORDER_RADIUS_SM: str = "4px"
-    BORDER_RADIUS_MD: str = "6px"
+    # ── Geometría (StemDeck usa 10/8/6 px) ─────────────────
+    BORDER_RADIUS_SM: str = "6px"
+    BORDER_RADIUS_MD: str = "8px"
+    BORDER_RADIUS_LG: str = "10px"
     FONT_FAMILY: str = (
-        "-apple-system, BlinkMacSystemFont, 'Segoe UI', "
+        "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', "
         "Roboto, Helvetica, Arial, sans-serif"
     )
     FONT_SIZE_BASE: str = "13px"
-    FONT_MONO: str = "Consolas, 'Courier New', monospace"
+    FONT_MONO: str = "'JetBrains Mono', 'Consolas', 'Courier New', monospace"
 
     # ── Estados ─────────────────────────────────────────────
-    HOVER_BRIGHTEN: str = "#444444"
+    HOVER_BRIGHTEN: str = "#1d262d"
     HOVER_ACCENT: str = "#106ebe"
-    PRESSED_DARKEN: str = "#222222"
+    PRESSED_DARKEN: str = "#0f1418"
+    BUTTON_BG: str = "#182026"
+
+    # ── Sliders custom (QPainter) ───────────────────────────
+    SLIDER_GROOVE: str = "#232c34"
+    SLIDER_CENTER: str = "#5d666e"
+    SLIDER_TEXT: str = "#8a939c"
 
     # ── SVG helper ──────────────────────────────────────────
-    SVG_ICON_DEFAULT: str = "#AAAAAA"
-    SVG_ICON_MUTED: str = "#888888"
-    SVG_ICON_ACTIVE: str = "#FFFFFF"
-    SVG_ICON_DANGER: str = "#FF5555"
+    SVG_ICON_DEFAULT: str = "#c2c9d1"
+    SVG_ICON_MUTED: str = "#8a939c"
+    SVG_ICON_ACTIVE: str = "#e8ecf0"
+    SVG_ICON_DANGER: str = "#ef4444"
     SVG_ICON_SOLO: str = "#FFAA00"
+    SVG_ICON_PLAYING: str = "#4caf7d"
+
+    # ── Impresión (exportación a PDF) ───────────────────────
+    TEXT_PRINT: str = "#5d666e"
+    TEXT_PRINT_HEADING: str = "#2e3942"
 
     # ── Overrides por theme ─────────────────────────────────
     custom_qss: str = ""
@@ -130,6 +146,12 @@ class Theme:
         return f"""
             QMainWindow {{
                 background-color: {self.BG_PRIMARY};
+                background-image: qradialgradient(
+                    cx: 0.5, cy: 0, radius: 0.7,
+                    fx: 0.5, fy: 0,
+                    stop: 0 rgba(216, 168, 74, 0.03),
+                    stop: 1 transparent
+                );
             }}
             QWidget {{
                 background-color: {self.BG_PRIMARY};
@@ -149,8 +171,9 @@ class Theme:
                 border: 1px solid {self.ACCENT_PRIMARY};
             }}
             QGroupBox {{
+                background-color: {self.BG_SECONDARY};
                 border: 1px solid {self.BORDER_DARK};
-                border-radius: {self.BORDER_RADIUS_MD};
+                border-radius: {self.BORDER_RADIUS_LG};
                 margin-top: 12px;
                 padding-top: 8px;
                 font-weight: bold;
@@ -161,21 +184,13 @@ class Theme:
                 padding: 0 6px;
                 color: {self.TEXT_MUTED};
             }}
-            QGroupBox#analysisBox {{
-                background-color: {self.BG_SECONDARY};
-                border: 1px solid {self.BG_TERTIARY};
-            }}
-            QGroupBox#pitchBox {{
-                background-color: {self.BG_SECONDARY};
-            }}
-            QGroupBox#tempoBox {{
-                background-color: {self.BG_SECONDARY};
-            }}
-            QGroupBox#playBox {{
-                background-color: {self.BG_SECONDARY};
-            }}
             QPushButton {{
-                background-color: #333333;
+                background-color: {self.BUTTON_BG};
+                background-image: qlineargradient(
+                    x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(255,255,255,0.04),
+                    stop:1 transparent
+                );
                 border: 1px solid {self.BORDER};
                 border-radius: {self.BORDER_RADIUS_MD};
                 padding: 6px 12px;
@@ -251,15 +266,58 @@ class Theme:
                 color: {self.TEXT_PRIMARY};
             }}
             QProgressBar::chunk {{
-                background-color: {self.ACCENT_PRIMARY};
+                background-color: qlineargradient(
+                    x1:0, y1:0, x2:1, y2:0,
+                    stop:0 {self.ACCENT_PRIMARY},
+                    stop:1 {self.ACCENT_PRIMARY_HOVER}
+                );
                 border-radius: {self.BORDER_RADIUS_SM};
             }}
             QScrollArea {{
                 border: none;
                 background-color: transparent;
             }}
+            QScrollBar:vertical {{
+                background: {self.BG_DARK};
+                width: 8px;
+                margin: 0;
+            }}
+            QScrollBar::handle:vertical {{
+                background: {self.BORDER_LIGHT};
+                border-radius: 4px;
+                min-height: 30px;
+            }}
+            QScrollBar::handle:vertical:hover {{
+                background: {self.ACCENT_PRIMARY};
+            }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                height: 0;
+            }}
+            QScrollBar:horizontal {{
+                background: {self.BG_DARK};
+                height: 8px;
+                margin: 0;
+            }}
+            QScrollBar::handle:horizontal {{
+                background: {self.BORDER_LIGHT};
+                border-radius: 4px;
+                min-width: 30px;
+            }}
+            QScrollBar::handle:horizontal:hover {{
+                background: {self.ACCENT_PRIMARY};
+            }}
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
+                width: 0;
+            }}
             QLabel {{
                 color: {self.TEXT_DEFAULT};
+            }}
+            QToolTip {{
+                background-color: {self.BG_SECONDARY};
+                color: {self.TEXT_PRIMARY};
+                border: 1px solid {self.BORDER_LIGHT};
+                border-radius: {self.BORDER_RADIUS_SM};
+                padding: 4px 8px;
             }}
         """ + self.custom_qss
 

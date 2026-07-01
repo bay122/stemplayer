@@ -2,11 +2,67 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QListWidget, QLineEdit, QDialogButtonBox, QGroupBox,
     QInputDialog, QMessageBox, QTabWidget, QWidget, QSpinBox,
-    QComboBox
+    QComboBox, QFrame, QGridLayout
 )
-from PySide6.QtCore import Qt, QSettings
+from PySide6.QtCore import Qt, QSettings, Signal
+from PySide6.QtGui import QColor
 from app.ui.theme import current as theme
 from app.services.providers import get_available_providers
+
+
+# Categorías que se pueden personalizar
+CATEGORY_COLOR_NAMES = [
+    "Vocals", "Drums", "Percussion", "Bass", "Guitars", "Keys",
+    "Strings", "Brass", "Winds", "Synths", "FX", "Ref", "Other"
+]
+
+DEFAULT_CATEGORY_COLORS = {
+    "Vocals":     "#FF5555",
+    "Drums":      "#FFAA00",
+    "Percussion": "#FF6644",
+    "Bass":       "#FFCC00",
+    "Guitars":    "#55CC55",
+    "Keys":       theme.ACCENT_PURPLE,
+    "Strings":    "#00BFFF",
+    "Brass":      "#FF8800",
+    "Winds":      "#88CCFF",
+    "Synths":     "#CC88FF",
+    "FX":         "#888888",
+    "Ref":        "#666666",
+    "Other":      "#AAAAAA",
+}
+
+
+class ColorSwatchButton(QPushButton):
+    """Botón que muestra el color actual y al click abre QColorDialog."""
+
+    color_changed = Signal(str)
+
+    def __init__(self, color: str, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(40, 26)
+        self.set_color(color)
+        self.clicked.connect(self._pick_color)
+
+    def set_color(self, color: str):
+        self._color = color
+        self.setStyleSheet(
+            f"background-color: {color}; border: 1px solid {theme.BORDER}; "
+            f"border-radius: 4px;"
+        )
+        self.setToolTip(color)
+
+    def get_color(self) -> str:
+        return self._color
+
+    def _pick_color(self):
+        col = QColorDialog.getColor(QColor(self._color), self, "Seleccionar color")
+        if col.isValid():
+            self.set_color(col.name())
+            self.color_changed.emit(col.name())
+
+
+from PySide6.QtWidgets import QColorDialog
 
 
 class SettingsDialog(QDialog):
@@ -28,6 +84,10 @@ class SettingsDialog(QDialog):
 
         self._stem_filters = stem_filters.copy()
         self._stream_port = stream_port
+        if config_mgr is not None:
+            self._category_colors = config_mgr.get_category_colors()
+        else:
+            self._category_colors = dict(DEFAULT_CATEGORY_COLORS)
 
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
@@ -51,7 +111,7 @@ class SettingsDialog(QDialog):
             }}
             QTabBar::tab:selected {{
                 background-color: {theme.ACCENT_INFO};
-                color: #FFF;
+                color: {theme.TEXT_PRIMARY};
                 font-weight: bold;
             }}
             QTabBar::tab:hover {{
@@ -152,13 +212,13 @@ class SettingsDialog(QDialog):
         add_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: {theme.ACCENT_SUCCESS};
-                color: #FFFFFF;
+                color: {theme.TEXT_PRIMARY};
                 border: none;
                 border-radius: {theme.BORDER_RADIUS_SM};
                 font-weight: bold;
                 font-size: 14px;
             }}
-            QPushButton:hover {{ background-color: #66BB6A; }}
+            QPushButton:hover {{ background-color: {theme.ACCENT_SUCCESS_HOVER}; }}
         """)
         add_row.addWidget(add_btn)
 
@@ -168,13 +228,13 @@ class SettingsDialog(QDialog):
         remove_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: {theme.ACCENT_DANGER_ALT};
-                color: #FFFFFF;
+                color: {theme.TEXT_PRIMARY};
                 border: none;
                 border-radius: {theme.BORDER_RADIUS_SM};
                 font-weight: bold;
                 font-size: 14px;
             }}
-            QPushButton:hover {{ background-color: #FF3333; }}
+            QPushButton:hover {{ background-color: {theme.ACCENT_DANGER_ALT_HOVER}; }}
         """)
         add_row.addWidget(remove_btn)
         gl.addLayout(add_row)
@@ -225,12 +285,12 @@ class SettingsDialog(QDialog):
         tl = QVBoxLayout(tab)
         tl.setSpacing(12)
 
-        title = QLabel("Streaming de Karaoke")
+        title = QLabel("Streaming de Live Chords")
         title.setStyleSheet(f"font-size: 15px; font-weight: bold; color: {theme.TEXT_PRIMARY};")
         tl.addWidget(title)
 
         desc = QLabel(
-            "Configuración del servidor HTTP para transmitir el karaoke "
+            "Configuración del servidor HTTP para transmitir el Live Chords "
             "a otros dispositivos en la misma red a través del navegador."
         )
         desc.setWordWrap(True)
@@ -379,6 +439,9 @@ class SettingsDialog(QDialog):
         tl.addStretch()
         self.tabs.addTab(tab, "IA")
 
+        # ---- Tab: Categorías (colores) ----
+        self._build_categories_tab()
+
     def _on_provider_changed(self, index):
         provider_id = self._provider_combo.itemData(index)
         settings = QSettings("StemPlayer", "StemPlayer")
@@ -418,3 +481,75 @@ class SettingsDialog(QDialog):
 
     def get_stream_port(self) -> int:
         return self._stream_port
+
+    def get_category_colors(self) -> dict:
+        return dict(self._category_colors)
+
+    def _build_categories_tab(self):
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        layout.setSpacing(12)
+        layout.setContentsMargins(12, 12, 12, 12)
+
+        title = QLabel("Colores de categorías de stems")
+        title.setStyleSheet(
+            f"color: {theme.TEXT_PRIMARY}; font-size: 13px; font-weight: bold;"
+        )
+        layout.addWidget(title)
+
+        desc = QLabel(
+            "Personaliza el color asociado a cada categoría. El color se "
+            "aplica en el waveform, los chips y las cards de presencia."
+        )
+        desc.setWordWrap(True)
+        desc.setStyleSheet(f"color: {theme.TEXT_SECONDARY}; font-size: 11px;")
+        layout.addWidget(desc)
+
+        grid = QGridLayout()
+        grid.setSpacing(10)
+        self._color_buttons = {}
+        for i, cat in enumerate(CATEGORY_COLOR_NAMES):
+            row = i // 2
+            col = (i % 2) * 2
+            lbl = QLabel(cat)
+            lbl.setStyleSheet(
+                f"color: {theme.TEXT_PRIMARY}; font-size: 11px; min-width: 90px;"
+            )
+            grid.addWidget(lbl, row, col)
+
+            color = self._category_colors.get(cat, DEFAULT_CATEGORY_COLORS[cat])
+            btn = ColorSwatchButton(color)
+            btn.color_changed.connect(
+                lambda new_color, c=cat: self._on_category_color_changed(c, new_color)
+            )
+            grid.addWidget(btn, row, col + 1)
+            self._color_buttons[cat] = btn
+
+        layout.addLayout(grid)
+        layout.addStretch()
+
+        # Botón "Restablecer defaults"
+        reset_btn = QPushButton("Restablecer colores por defecto")
+        reset_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {theme.BUTTON_BG};
+                color: {theme.TEXT_PRIMARY};
+                border: 1px solid {theme.BORDER};
+                border-radius: {theme.BORDER_RADIUS_SM};
+                padding: 4px 12px;
+            }}
+            QPushButton:hover {{ background-color: {theme.HOVER_BRIGHTEN}; }}
+        """)
+        reset_btn.clicked.connect(self._reset_category_colors)
+        layout.addWidget(reset_btn)
+
+        self.tabs.addTab(tab, "Categorías")
+
+    def _on_category_color_changed(self, category: str, color: str):
+        self._category_colors[category] = color
+
+    def _reset_category_colors(self):
+        for cat, btn in self._color_buttons.items():
+            color = DEFAULT_CATEGORY_COLORS[cat]
+            btn.set_color(color)
+            self._category_colors[cat] = color

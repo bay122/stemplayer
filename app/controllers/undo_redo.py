@@ -128,6 +128,12 @@ class UndoRedoMixin:
     def _update_undo_redo_btns(self):
         self.undo_btn.setEnabled(self.state.history_idx > 0)
         self.redo_btn.setEnabled(self.state.history_idx < len(self.state.history) - 1)
+        if getattr(self, 'deck_layout', None) is not None:
+            try:
+                self.deck_layout.deck_undo_btn.setEnabled(self.undo_btn.isEnabled())
+                self.deck_layout.deck_redo_btn.setEnabled(self.redo_btn.isEnabled())
+            except Exception:
+                pass
 
     def _mark_changes(self):
         self.state.has_unsaved_changes = True
@@ -173,3 +179,12 @@ class UndoRedoMixin:
             self.save_lib_btn.setVisible(False)
             self.save_changes_btn.setVisible(False)
             self.generate_chordpro_btn.setVisible(False)
+
+        if getattr(self, 'deck_layout', None) is not None:
+            try:
+                self.deck_layout.update_save_buttons()
+                self.deck_layout._update_actions_row(
+                    in_library, is_folder
+                )
+            except Exception:
+                pass

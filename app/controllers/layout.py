@@ -1,6 +1,7 @@
 import os
 from PySide6.QtWidgets import QMessageBox
 from app.ui.svg_icon import svg_icon
+from app.ui.theme import current as theme
 
 
 class LayoutMixin:
@@ -10,7 +11,7 @@ class LayoutMixin:
             self.toggle_live_btn.setText("Mezclador")
         else:
             self.center_stack.setCurrentIndex(0)
-            self.toggle_live_btn.setText("Karaoke")
+            self.toggle_live_btn.setText("Live Chords")
             self.live_display_widget.reset()
 
     def _toggle_left_panel(self):
@@ -18,12 +19,12 @@ class LayoutMixin:
         if self.left_panel_collapsed:
             self.lib_panel.setMaximumWidth(0)
             self.lib_panel.setMinimumWidth(0)
-            self.collapse_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-h-expand.svg"), "#888888"))
+            self.collapse_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-h-expand.svg"), theme.SVG_ICON_MUTED))
             self.collapse_btn.setToolTip("Expandir panel izquierdo")
         else:
             self.lib_panel.setMaximumWidth(340)
             self.lib_panel.setMinimumWidth(340)
-            self.collapse_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-h-expand.svg"), "#888888"))
+            self.collapse_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-h-expand.svg"), theme.SVG_ICON_MUTED))
             self.collapse_btn.setToolTip("Contraer panel izquierdo")
 
     def closeEvent(self, event):
@@ -96,4 +97,19 @@ class LayoutMixin:
         self.status_label.setText("Listo")
         self._update_save_buttons()
         self._update_undo_redo_btns()
+
+        if getattr(self, 'deck_layout', None) is not None:
+            try:
+                self.deck_layout.update_song_header("", "")
+                self.deck_layout.update_visibility("", False)
+                self.deck_layout.update_save_buttons()
+                self.deck_layout.rebuild_stems()
+                self.deck_layout.info_cards.update_info(self.state)
+                self.deck_layout.set_deck_status_text("Listo")
+                self.deck_layout.set_deck_status_visible(False)
+                self.deck_layout.set_deck_progress_value(0, False)
+                self.deck_layout.set_deck_bg_status("", False)
+            except Exception:
+                pass
+
         return True

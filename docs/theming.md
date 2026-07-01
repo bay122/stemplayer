@@ -70,7 +70,7 @@ theme = Theme(
 | **Fondos** | `BG_PRIMARY` | `#121212` | Fondo principal |
 | | `BG_SECONDARY` | `#1E1E1E` | Paneles, inputs |
 | | `BG_TERTIARY` | `#2A2A2A` | Widgets de stems, menús |
-| | `BG_DARK` | `#111111` | Karaoke / live display |
+| | `BG_DARK` | `#111111` | Live Chords / live display |
 | | `BG_INPUT` | `#1E1E1E` | QLineEdit, QComboBox |
 | | `BG_EDITOR` | `#1e1e1e` | Editor ChordPro |
 | | `BG_MENU` | `#2A2A2A` | Fondos de menú contextual |

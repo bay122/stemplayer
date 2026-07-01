@@ -2,6 +2,7 @@ import os
 from PySide6.QtWidgets import QMessageBox
 from app.ui.stem_item_widget import StemItemWidget
 from app.ui.svg_icon import svg_icon
+from app.ui.theme import current as theme
 
 
 class StemUIMixin:
@@ -34,10 +35,17 @@ class StemUIMixin:
         )
 
     def _on_auto_play_toggled(self, checked):
-        color = "#00FF00" if checked else "#FFFFFF"
-        self.auto_play_btn.setIcon(
-            svg_icon(os.path.join(self.icons_dir, "fad-preset-ab.svg"), color)
-        )
+        color = theme.SVG_ICON_PLAYING if checked else theme.SVG_ICON_ACTIVE
+        icon = svg_icon(os.path.join(self.icons_dir, "fad-preset-ab.svg"), color)
+        self.auto_play_btn.setIcon(icon)
+        if getattr(self, 'deck_layout', None) is not None:
+            try:
+                self.deck_layout.deck_auto_play_btn.blockSignals(True)
+                self.deck_layout.deck_auto_play_btn.setChecked(checked)
+                self.deck_layout.deck_auto_play_btn.blockSignals(False)
+                self.deck_layout.deck_auto_play_btn.setIcon(icon)
+            except Exception:
+                pass
 
     def _rebuild_stems_ui(self):
         self._clear_stems_ui()
@@ -64,9 +72,31 @@ class StemUIMixin:
             widget.move_down_requested.connect(lambda n: self._on_stem_move_down(n))
             self.stems_layout.addWidget(widget)
 
+        if getattr(self, 'deck_layout', None) is not None:
+            try:
+                self.deck_layout.rebuild_stems()
+            except Exception:
+                pass
+
+    def _sync_deck_volume_visual(self, name: str):
+        """Sincroniza la amplitud del waveform del deck tras cambio de volumen."""
+        if getattr(self, 'deck_layout', None) is None:
+            return
+        try:
+            row = self.deck_layout._deck_rows.get(name)
+            if row is None:
+                return
+            data = self.state.stems.get(name)
+            if data is None:
+                return
+            row.set_volume_visual(data.get("volume", 1.0))
+        except Exception:
+            pass
+
     def _on_stem_volume_changed(self, name: str, value: float):
         if name in self.state.stems:
             self.state.stems[name]["volume"] = value
+        self._sync_deck_volume_visual(name)
 
     def _on_stem_volume_released(self, name: str):
         self._push_state_if_needed()

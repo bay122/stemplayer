@@ -12,7 +12,7 @@
 8. [Flujo completo de trabajo](#8-flujo-completo-de-trabajo)
 9. [ChordPro y acordes](#9-chordpro-y-acordes)
 10. [Editor de Sync](#10-editor-de-sync)
-11. [Modo Karaoke](#11-modo-karaoke)
+11. [Modo Live Chords](#11-modo-live-chords)
 12. [Streaming a navegador](#12-streaming-a-navegador)
 13. [Exportación](#13-exportación)
 14. [Undo / Redo](#14-undo--redo)
@@ -104,7 +104,7 @@ La ventana se divide en **tres paneles**:
 │                   │  │  └───────────────────┘   │    │  │  Reset     │  │
 │                   │  │                          │    │  └────────────┘  │
 │                   │  │  [Guardar][Generar]       │    │  ┌────────────┐  │
-│                   │  │  [Karaoke][⋮]             │    │  │Reproducción│  │
+│                   │  │  [Live Chords][⋮]        │    │  │Reproducción│  │
 │                   │  │                          │    │  │◀⏸⏹▶      │  │
 │                   │  │  [Cerrar Canción]         │    │  │ [====o===] │  │
 │                   │  │                          │    │  │ 00:00/00:00│  │
@@ -225,7 +225,7 @@ Estos botones aparecen condicionalmente según el contexto:
 | **Guardar en librería** | Canción cargada desde carpeta (no estaba en librería) | Copia los stems a la librería y guarda metadatos |
 | **Guardar Cambios** | Canción cargada desde librería con cambios sin guardar | Actualiza los metadatos de la canción |
 | **Generar Sheet / Regenerar Sheet** | Canción guardada en librería | Genera hoja de acordes ChordPro |
-| **Karaoke / Mezclador** | Cuando existe archivo ChordPro | Cambia entre la vista de mezclador y la vista karaoke |
+| **Live Chords / Mezclador** | Cuando existe archivo ChordPro | Cambia entre la vista de mezclador y la vista Live Chords |
 | **⋮ (Más)** | Canción cargada desde librería | Abre el menú de opciones adicionales |
 
 #### Menú ⋮ (Más opciones)
@@ -368,7 +368,7 @@ Esto permite recargar canciones rápidamente sin reprocesar.
 1. Selecciona una canción en la lista (doble clic).
 2. Se carga con toda su configuración guardada.
 3. Haz cambios, guarda cambios si deseas persistirlos.
-4. Genera sheet de acordes, edita sync, o activa karaoke.
+4. Genera sheet de acordes, edita sync, o activa Live Chords.
 
 ### 8.3 Con setlist
 
@@ -406,7 +406,7 @@ La app puede generar hojas de acordes ChordPro automáticamente usando IA (OpenR
 Cuando existe un archivo `.chopro`, aparece un panel de previsualización en la parte inferior del área central. Muestra el contenido ChordPro renderizado como HTML. Desde ahí puedes:
 
 - **⛶ (Maximizar)**: Ver el sheet a pantalla completa en el panel central.
-- **Karaoke**: Cambiar al modo karaoke en vivo.
+- **Live Chords**: Cambiar al modo Live Chords en vivo.
 - **✎ (Editar)**: Abrir el editor ChordPro.
 
 ### 9.3 Editor ChordPro
@@ -460,11 +460,11 @@ El editor de sincronización permite ajustar manualmente los timestamps de cada 
 
 ---
 
-## 11. Modo Karaoke
+## 11. Modo Live Chords
 
-### 11.1 Vista Karaoke en la app
+### 11.1 Vista Live Chords en la app
 
-Presiona el botón **"Karaoke"** (o **"Karaoke"** en el panel ChordPro). El panel central cambia a la vista de karaoke en vivo:
+Presiona el botón **"Live Chords"** (o **"Live Chords"** en el panel ChordPro). El panel central cambia a la vista de Live Chords en vivo:
 
 | Elemento | Descripción |
 |---|---|
@@ -479,7 +479,7 @@ Presiona el botón **"Karaoke"** (o **"Karaoke"** en el panel ChordPro). El pane
 - **Doble clic** en cualquier parte → pantalla completa.
 - **Ctrl + Rueda del ratón** → Aumenta/disminuye el tamaño de letra.
 - Botón **⛶** → Elige entre pantalla completa o streaming web.
-- Botón **✕ Cerrar Karaoke** → Vuelve al mezclador.
+- Botón **✕ Cerrar Live Chords** → Vuelve al mezclador.
 
 ### 11.2 Pantalla completa
 
@@ -495,7 +495,7 @@ Ventana frameless (sin bordes) que ocupa toda la pantalla:
 
 ### 11.3 Streaming a navegador
 
-Desde el botón ⛶ en la vista karaoke, selecciona **"Stream to browser (Web)"**.
+Desde el botón ⛶ en la vista Live Chords, selecciona **"Stream to browser (Web)"**.
 
 Se inicia un servidor HTTP en el puerto configurado (predeterminado: 8080). Aparece un diálogo con:
 
@@ -514,7 +514,7 @@ La página web se actualiza cada 200ms mostrando:
 
 ## 12. Streaming a navegador
 
-El streaming envía el estado del karaoke (no el audio) a navegadores en la red local. Es útil para que los músicos vean la letra y los acordes en sus dispositivos móviles durante una presentación.
+El streaming envía el estado del Live Chords (no el audio) a navegadores en la red local. Es útil para que los músicos vean la letra y los acordes en sus dispositivos móviles durante una presentación.
 
 **Configuración del puerto**: En Settings > Streaming, puedes cambiar el puerto (1024-65535). El cambio se aplica al iniciar el stream.
 
@@ -579,7 +579,7 @@ Cada grupo tiene:
 
 | Control | Descripción |
 |---|---|
-| **Puerto** | Puerto del servidor HTTP de karaoke (1024-65535, por defecto 8080) |
+| **Puerto** | Puerto del servidor HTTP de Live Chords (1024-65535, por defecto 8080) |
 
 ### 15.3 Pestaña IA
 
@@ -625,8 +625,8 @@ Si el tema no existe, se muestra un aviso en consola y se usa el tema oscuro por
 | **Ctrl+Y** | Redo |
 | **Ctrl+Z** (en SyncEditor) | Undo (historial del editor) |
 | **Ctrl+Y** (en SyncEditor) | Redo (historial del editor) |
-| **Ctrl+Scroll** (en karaoke) | Cambiar tamaño de letra |
-| **Escape** (en pantalla completa karaoke) | Cerrar pantalla completa |
+| **Ctrl+Scroll** (en Live Chords) | Cambiar tamaño de letra |
+| **Escape** (en pantalla completa Live Chords) | Cerrar pantalla completa |
 | **Doble clic** (en lista de librería/setlist) | Cargar canción |
 | **Doble clic** (en live display) | Alternar pantalla completa |
 
@@ -714,7 +714,7 @@ Puedes editar manualmente la key detectada con el botón **✎** junto a "Key:" 
 3. Comprueba la conexión a internet.
 4. Revisa la consola por mensajes de error.
 
-### El stream karaoke no se conecta
+### El stream Live Chords no se conecta
 
 1. Verifica que el puerto no esté bloqueado por el firewall.
 2. Asegúrate de que los dispositivos estén en la misma red.

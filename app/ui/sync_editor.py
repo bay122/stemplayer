@@ -605,13 +605,13 @@ class SyncEditor(QWidget):
         self.play_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: {theme.ACCENT_SUCCESS};
-                color: #FFFFFF;
+                color: {theme.TEXT_PRIMARY};
                 border: none;
                 border-radius: {theme.BORDER_RADIUS_SM};
                 font-weight: bold;
                 font-size: 16px;
             }}
-            QPushButton:hover {{ background-color: #66BB6A; }}
+            QPushButton:hover {{ background-color: {theme.ACCENT_SUCCESS_HOVER}; }}
         """)
         self.play_btn.clicked.connect(self._toggle_playback)
         playback_layout.addWidget(self.play_btn)
@@ -690,13 +690,13 @@ class SyncEditor(QWidget):
         self.add_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: {theme.ACCENT_INFO};
-                color: #FFFFFF;
+                color: {theme.TEXT_PRIMARY};
                 border: none;
                 border-radius: {theme.BORDER_RADIUS_SM};
                 padding: 6px 14px;
                 font-weight: bold;
             }}
-            QPushButton:hover {{ background-color: #42A5F5; }}
+            QPushButton:hover {{ background-color: {theme.ACCENT_INFO_HOVER}; }}
         """)
         self.add_btn.clicked.connect(self._add_section)
         btn_layout.addWidget(self.add_btn)
@@ -757,13 +757,13 @@ class SyncEditor(QWidget):
         self.save_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: {theme.ACCENT_SUCCESS};
-                color: #FFFFFF;
+                color: {theme.TEXT_PRIMARY};
                 border: none;
                 border-radius: {theme.BORDER_RADIUS_SM};
                 padding: 6px 14px;
                 font-weight: bold;
             }}
-            QPushButton:hover {{ background-color: #66BB6A; }}
+            QPushButton:hover {{ background-color: {theme.ACCENT_SUCCESS_HOVER}; }}
         """)
         self.save_btn.clicked.connect(self._save)
         btn_layout.addWidget(self.save_btn)
@@ -873,12 +873,12 @@ class SyncEditor(QWidget):
         del_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: {theme.ACCENT_DANGER_ALT};
-                color: #FFFFFF;
+                color: {theme.TEXT_PRIMARY};
                 border: none;
                 border-radius: {theme.BORDER_RADIUS_SM};
                 font-weight: bold;
             }}
-            QPushButton:hover {{ background-color: #FF3333; }}
+            QPushButton:hover {{ background-color: {theme.ACCENT_DANGER_ALT_HOVER}; }}
         """)
         del_btn.clicked.connect(lambda checked=False, b=del_btn: self._delete_row(self._row_of_widget(b, 3)))
         self.table.setCellWidget(row, 3, del_btn)

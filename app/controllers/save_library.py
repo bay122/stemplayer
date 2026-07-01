@@ -5,9 +5,10 @@ import soundfile as sf
 from PySide6.QtWidgets import QInputDialog, QMessageBox, QFileDialog
 from app.data.metadata import build_metadata
 from app.audio.exporter import ExportThread
+from app.controllers.deck_sync import DeckStatusMixin
 
 
-class SaveLibraryMixin:
+class SaveLibraryMixin(DeckStatusMixin):
     def _save_to_library(self):
         self.lib_mgr.library_path = self.config_mgr.get_library_path()
         if not self.state.stems:
@@ -72,6 +73,7 @@ class SaveLibraryMixin:
         self._update_save_buttons()
         self.library_widget.refresh_ui()
         self.status_label.setText(f"Guardado: {title}")
+        self._sync_deck_status(f"Guardado: {title}")
 
         if self.setlist_widget.current_setlist_index >= 0:
             self.setlist_widget.add_song_to_current(title)
@@ -109,6 +111,7 @@ class SaveLibraryMixin:
         self._update_save_buttons()
         self.library_widget.refresh_ui()
         self.status_label.setText("Cambios guardados.")
+        self._sync_deck_status("Cambios guardados.")
 
     def _save_as(self):
         self.lib_mgr.library_path = self.config_mgr.get_library_path()
@@ -154,6 +157,7 @@ class SaveLibraryMixin:
         self._update_save_buttons()
         self.library_widget.refresh_ui()
         self.status_label.setText(f"Guardado como: {new_name}")
+        self._sync_deck_status(f"Guardado como: {new_name}")
 
     def _on_song_export_requested(self, song_name: str, export_type: str):
         if self.threads.export_thread and self.threads.export_thread.isRunning():
@@ -182,16 +186,18 @@ class SaveLibraryMixin:
 
         new_thread = ExportThread(export_type, dest_path, song_folder, meta, self.state.mix_sr)
         new_thread.progress.connect(self._on_export_progress)
-        new_thread.progress_pct.connect(self.progress_bar.setValue)
+        new_thread.progress_pct.connect(self._on_export_progress_pct)
         new_thread.finished_export.connect(self._on_export_finished)
         new_thread.error.connect(self._on_export_error)
         self.progress_bar.setVisible(True)
+        self._sync_deck_progress(0, True)
         self.progress_bar.setValue(0)
         self.threads.safe_replace('export_thread', new_thread)
         self.threads.safe_start(self.threads.export_thread)
 
     def _on_export_progress(self, msg: str):
         self.status_label.setText(msg)
+        self._sync_deck_status(msg)
 
     def _on_export_finished(self, path: str):
         sender = self.sender()
@@ -199,8 +205,25 @@ class SaveLibraryMixin:
             return
 
         self.status_label.setText(f"Exportado: {os.path.basename(path)}")
+        self._sync_deck_status(f"Exportado: {os.path.basename(path)}")
         self.progress_bar.setVisible(False)
+        self._sync_deck_progress(0, False)
         self.threads.export_thread = None
+        QMessageBox.information(self, "Exportación", f"Archivo guardado en:\n{path}")
+
+    def _on_export_error(self, msg: str):
+        sender = self.sender()
+        if sender is not None and sender is not self.threads.export_thread:
+            return
+        self.status_label.setText(f"Error de exportación: {msg}")
+        self._sync_deck_status(f"Error de exportación: {msg}")
+        self.progress_bar.setVisible(False)
+        self._sync_deck_progress(0, False)
+        self.threads.export_thread = None
+
+    def _on_export_progress_pct(self, pct: int):
+        self.progress_bar.setValue(pct)
+        self._sync_deck_progress(pct, True)
         QMessageBox.information(self, "Exportación", f"Archivo guardado en:\n{path}")
 
     def _on_export_error(self, msg: str):

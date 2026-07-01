@@ -8,6 +8,7 @@ from app.services import create_sync_file
 from app.services.chord_analysis import ChordAnalysisThread
 from app.services.openrouter_service import (OpenRouterLLMThread, build_sync_prompt, _parse_sync_response)
 from app.services.providers import get_available_providers, get_provider
+from app.controllers.deck_sync import DeckStatusMixin
 
 
 class SyncRegeneratorThread(QThread):
@@ -83,7 +84,7 @@ _API_KEY_TPL = "ai/api_key/{}"
 _MODEL_TPL = "ai/model/{}"
 
 
-class ChordProGenerationMixin:
+class ChordProGenerationMixin(DeckStatusMixin):
     def _get_ai_config(self):
         settings = QSettings("StemPlayer", "StemPlayer")
         provider_id = settings.value(_PROVIDER_SETTING, "openrouter")
@@ -188,9 +189,17 @@ class ChordProGenerationMixin:
     def _set_generation_feedback(self, status: str, progress: int = -1):
         self.bg_status_label.setText(status)
         self.bg_status_label.setVisible(True)
+        self._sync_deck_bg_status(status, True)
         if progress >= 0:
             self.progress_bar.setValue(progress)
             self.progress_bar.setVisible(True)
+            self._sync_deck_progress(progress, True)
+
+    def _reset_generation_feedback(self):
+        self.bg_status_label.setVisible(False)
+        self._sync_deck_bg_status("", False)
+        self.progress_bar.setVisible(False)
+        self._sync_deck_progress(0, False)
 
     def _on_chord_analysis_progress(self, msg: str):
         self._set_generation_feedback(msg)
@@ -198,6 +207,7 @@ class ChordProGenerationMixin:
     def _on_chord_analysis_progress_pct(self, pct: int):
         self.progress_bar.setValue(pct)
         self.progress_bar.setVisible(True)
+        self._sync_deck_progress(pct, True)
 
     def _on_ai_progress(self, msg: str):
         self._set_generation_feedback(msg)

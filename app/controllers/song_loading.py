@@ -4,9 +4,10 @@ import numpy as np
 from PySide6.QtWidgets import QFileDialog, QInputDialog
 from PySide6.QtCore import QTimer
 from app.audio.stem_loader import StemLoaderThread
+from app.controllers.deck_sync import DeckStatusMixin
 
 
-class SongLoadingMixin:
+class SongLoadingMixin(DeckStatusMixin):
     def _load_stems(self):
         folder = QFileDialog.getExistingDirectory(self, "Seleccionar carpeta de stems")
         if not folder:
@@ -32,6 +33,7 @@ class SongLoadingMixin:
 
         if hasattr(self, 'preloaded_song_cache') and self.preloaded_song_cache and self.preloaded_song_cache["name"] == song_name:
             self.status_label.setText("Cargando desde caché...")
+            self._sync_deck_status("Cargando desde caché...")
             cache = self.preloaded_song_cache
             self._on_loader_finished(cache["stems"], cache["key"], cache["bpm"], metadata, cache["click_offset_samples"], cache["order"])
             self.preloaded_song_cache = None
@@ -40,6 +42,8 @@ class SongLoadingMixin:
         self.status_label.setText("Cargando stems...")
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
+        self._sync_deck_status("Cargando stems...")
+        self._sync_deck_progress(0, True)
         self.state.current_song_name = song_name
         self.state.current_song_source = source
         self.save_lib_btn.setVisible(source == "folder")
@@ -52,7 +56,7 @@ class SongLoadingMixin:
             stem_filters=self.config_mgr.get_stem_filters()
         )
         new_thread.progress.connect(self._on_loader_progress)
-        new_thread.progress_pct.connect(self.progress_bar.setValue)
+        new_thread.progress_pct.connect(self._on_loader_progress_pct)
         new_thread.finished_loading.connect(
             lambda stems, key, bpm, offset, order: self._on_loader_finished(stems, key, bpm, metadata, offset, order)
         )
@@ -62,10 +66,17 @@ class SongLoadingMixin:
 
     def _on_loader_progress(self, msg: str):
         self.status_label.setText(msg)
+        self._sync_deck_status(msg)
+
+    def _on_loader_progress_pct(self, pct: int):
+        self.progress_bar.setValue(pct)
+        self._sync_deck_progress(pct, True)
 
     def _on_loader_error(self, msg: str):
         self.status_label.setText(f"Error: {msg}")
         self.progress_bar.setVisible(False)
+        self._sync_deck_status(f"Error: {msg}")
+        self._sync_deck_progress(0, False)
 
     def _on_loader_finished(self, stems, key, bpm, metadata=None, offset=0, order=None):
         sender = self.sender()
@@ -121,6 +132,21 @@ class SongLoadingMixin:
         self.artist_input.setText(self.state.current_song_artist)
         self.artist_input.blockSignals(False)
 
+        if getattr(self, 'deck_layout', None) is not None:
+            try:
+                self.deck_layout.update_song_header(
+                    self.state.current_song_name,
+                    self.state.current_song_artist
+                )
+                self.deck_layout.update_visibility(
+                    self.state.current_song_source,
+                    bool(self.state.current_song_name)
+                )
+                self.deck_layout.update_save_buttons()
+                self.deck_layout.rebuild_stems()
+            except Exception:
+                pass
+
         self.key_label.setText(f"Key: {self.state.detected_key}")
         self.bpm_label.setText(f"BPM: {self.state.detected_bpm}")
         self.orig_bpm_label.setText(str(self.state.detected_bpm))
@@ -159,6 +185,9 @@ class SongLoadingMixin:
         self.status_label.setText("Listo")
         self.progress_bar.setVisible(False)
         self.bg_status_label.setVisible(False)
+        self._sync_deck_status("Listo")
+        self._sync_deck_progress(0, False)
+        self._sync_deck_bg_status("", False)
         self.close_song_btn.setVisible(True)
         self.chordpro_preview_widget.setVisible(False)
         self.threads.loader_thread = None
@@ -241,6 +270,7 @@ class SongLoadingMixin:
     def _preload_next_setlist_song(self):
         self.threads.safe_replace('preloader_thread', None)
         self.bg_status_label.setVisible(False)
+        self._sync_deck_bg_status("", False)
         self.preloaded_song_cache = None
 
         if self.setlist_widget.current_setlist_index < 0:
@@ -281,6 +311,7 @@ class SongLoadingMixin:
     def _on_preload_progress(self, msg: str):
         self.bg_status_label.setText(f"Pre-cargando: {msg}")
         self.bg_status_label.setVisible(True)
+        self._sync_deck_bg_status(f"Pre-cargando: {msg}", True)
 
     def _on_preload_finished(self, stems, key, bpm, offset, order):
         sender = self.sender()
@@ -300,4 +331,5 @@ class SongLoadingMixin:
             "order": order,
         }
         self.bg_status_label.setVisible(False)
+        self._sync_deck_bg_status("", False)
         self.threads.preloader_thread = None

@@ -72,7 +72,7 @@ stemsplayer/
 │   │   ├── setlist_panel.py         # SetlistPanel
 │   │   ├── add_song_dialog.py       # AddSongToSetlistDialog
 │   │   ├── collapsible_section.py   # CollapsibleSection widget
-│   │   ├── karaoke_streamer.py      # Karaoke HTTP streamer (web)
+│   │   ├── karaoke_streamer.py      # Live Chords HTTP streamer (web)
 │   │   ├── settings_dialog.py       # Settings dialog (3 tabs)
 │   │   └── sync_editor.py           # Sync editor con waveform
 │   │

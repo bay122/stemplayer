@@ -78,8 +78,10 @@ class ChordProParser:
         return {"metadata": metadata, "sections": sections}
 
     @staticmethod
-    def render_html(chordpro_text):
+    def render_html(chordpro_text, theme=None):
         """Converts raw chordpro lines to HTML showing chords above lyrics."""
+        from app.ui.theme import current as theme_proxy
+        t = theme if theme is not None else theme_proxy
         lines = chordpro_text.split('\n')
         html = ["<div style='font-family: monospace; font-size: 16px; line-height: 1.4; white-space: pre;'>"]
 
@@ -89,7 +91,7 @@ class ChordProParser:
                 continue
 
             if line.startswith("{"):
-                html.append(f"<span style='color: #888;'>{line}</span><br>")
+                html.append(f"<span style='color: {t.TEXT_SECONDARY};'>{line}</span><br>")
                 continue
 
             parts = re.split(r'(\[[^\]]+\])', line)
@@ -100,7 +102,7 @@ class ChordProParser:
             for i, part in enumerate(parts):
                 if part.startswith("[") and part.endswith("]"):
                     chord = part[1:-1]
-                    chord_line += f"<span style='color: #4CAF50; font-weight: bold;'>{chord}</span>"
+                    chord_line += f"<span style='color: {t.ACCENT_SUCCESS}; font-weight: bold;'>{chord}</span>"
                     prev_part = parts[i-1] if i > 0 else ""
                     next_part = parts[i+1] if i+1 < len(parts) else ""
                     prev_cont = bool(prev_part) and not prev_part[-1].isspace()
@@ -115,7 +117,7 @@ class ChordProParser:
                     chord_line += "<span style='visibility: hidden;'>" + safe_part + "</span>"
                     lyric_line += safe_part
 
-            if "<span style='color: #4CAF50" in chord_line:
+            if f"<span style='color: {t.ACCENT_SUCCESS}" in chord_line:
                 html.append(f"<div style='margin-bottom: -5px;'>{chord_line}</div>")
             html.append(f"<div>{lyric_line}</div>")
 
@@ -296,17 +298,17 @@ class ChordProEditor(QWidget):
 
         html.append(f"<h1 style='text-align: center; margin-bottom: 0;'>{title}</h1>")
         if artist:
-            html.append(f"<h2 style='text-align: center; margin-top: 5px; color: #555;'>{artist}</h2>")
+            html.append(f"<h2 style='text-align: center; margin-top: 5px; color: {theme.TEXT_PRINT};'>{artist}</h2>")
         if key:
             html.append(f"<p style='text-align: center;'>Tonalidad: <strong>{key}</strong></p><hr>")
 
         for sec in self.parsed_data["sections"]:
-            html.append(f"<h3 style='margin-top: 20px; color: #333;'>{sec.get('name', '')}</h3>")
+            html.append(f"<h3 style='margin-top: 20px; color: {theme.TEXT_PRINT_HEADING};'>{sec.get('name', '')}</h3>")
             sec_text = "\n".join(sec["lines"])
             sec_html = ChordProParser.render_html(sec_text)
 
-            sec_html = sec_html.replace("color: #4CAF50", "color: #000000; font-weight: bold;")
-            sec_html = sec_html.replace("color: #FFFFFF", "color: #000000")
+            sec_html = sec_html.replace(f"color: {theme.ACCENT_SUCCESS}", "color: #000000; font-weight: bold;")
+            sec_html = sec_html.replace(f"color: {theme.TEXT_SECONDARY}", "color: #000000")
             html.append(sec_html)
 
         html.append("</body></html>")

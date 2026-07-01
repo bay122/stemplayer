@@ -105,12 +105,12 @@ class KaraokeFullscreenWindow(QWidget):
 
         self.section_content = QTextBrowser()
         self.section_content.setOpenExternalLinks(False)
-        self.section_content.setStyleSheet("""
-            QTextBrowser {
+        self.section_content.setStyleSheet(f"""
+            QTextBrowser {{
                 background-color: transparent;
                 border: none;
-                color: #FFFFFF;
-            }
+                color: {theme.TEXT_PRIMARY};
+            }}
         """)
         layout.addWidget(self.section_content, stretch=1)
 
@@ -253,7 +253,7 @@ class LiveChordWidget(QWidget):
 
         self.fullscreen_btn = QPushButton("⛶")
         self.fullscreen_btn.setFixedSize(32, 28)
-        self.fullscreen_btn.setToolTip("Pantalla completa (solo karaoke)")
+        self.fullscreen_btn.setToolTip("Pantalla completa (solo Live Chords)")
         self.fullscreen_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: {theme.BG_TERTIARY};
@@ -272,9 +272,9 @@ class LiveChordWidget(QWidget):
 
         top_btn_layout.addStretch()
 
-        self.close_btn = QPushButton("✕ Cerrar Karaoke")
+        self.close_btn = QPushButton("✕ Cerrar Live Chords")
         self.close_btn.setMaximumWidth(200)
-        self.close_btn.setToolTip("Cerrar la ventana de karaoke")
+        self.close_btn.setToolTip("Cerrar la ventana de Live Chords")
         self.close_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: {theme.ACCENT_DANGER_ALT};
@@ -285,7 +285,7 @@ class LiveChordWidget(QWidget):
                 font-weight: bold;
             }}
             QPushButton:hover {{
-                background-color: #FF3333;
+                background-color: {theme.ACCENT_DANGER_ALT_HOVER};
             }}
         """)
         self.close_btn.clicked.connect(self.close_requested.emit)
@@ -429,7 +429,7 @@ class LiveChordWidget(QWidget):
         items = [f"Pantalla {i+1}: {s.name()}" for i, s in enumerate(screens)]
         items.append("🌐 Stream a navegador (Web)")
         item, ok = QInputDialog.getItem(self, "Seleccionar pantalla",
-            "¿En qué pantalla mostrar el karaoke?", items, 0, False)
+            "¿En qué pantalla mostrar el Live Chords?", items, 0, False)
         if not ok or not item:
             return
 
@@ -491,7 +491,7 @@ class LiveChordWidget(QWidget):
 
     def _show_stream_dialog(self):
         dialog = QDialog(self)
-        dialog.setWindowTitle("Streaming de Karaoke")
+        dialog.setWindowTitle("Streaming de Live Chords")
         dialog.setMinimumWidth(420)
         dialog.setStyleSheet(f"""
             QDialog {{
@@ -550,7 +550,7 @@ class LiveChordWidget(QWidget):
             QPushButton:hover {{ background-color: {theme.HOVER_BRIGHTEN}; }}
             QPushButton:checked {{
                 background-color: {theme.ACCENT_INFO};
-                color: #FFF;
+                color: {theme.TEXT_PRIMARY};
                 border-color: {theme.ACCENT_INFO};
             }}
         """)
@@ -584,14 +584,14 @@ class LiveChordWidget(QWidget):
         stop_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: {theme.ACCENT_DANGER_ALT};
-                color: #FFF;
+                color: {theme.TEXT_PRIMARY};
                 border: none;
                 border-radius: {theme.BORDER_RADIUS_SM};
                 padding: 8px 16px;
                 font-size: 13px;
                 font-weight: bold;
             }}
-            QPushButton:hover {{ background-color: #FF3333; }}
+            QPushButton:hover {{ background-color: {theme.ACCENT_DANGER_ALT_HOVER}; }}
         """)
         stop_btn.clicked.connect(lambda: self._stop_stream())
         dl.addWidget(stop_btn)

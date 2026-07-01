@@ -6,13 +6,14 @@ STEM_CATEGORIES = [
     "Guitars",
     "Bass",
     "Drums",
+    "Percussion",
     "Keys",
     "Strings",
     "Brass",
     "Winds",
-    "Percussion",
     "Synths",
     "FX",
+    "Ref",
     "Other",
 ]
 

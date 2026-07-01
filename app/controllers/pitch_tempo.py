@@ -10,6 +10,11 @@ class PitchTempoMixin:
         target_bpm = self.bpm_spin.value()
         self.state.current_tempo_ratio = target_bpm / self.state.detected_bpm if self.state.detected_bpm > 0 else 1.0
         self.tempo_ratio_label.setText(f"{self.state.current_tempo_ratio*100:.1f}%")
+        if getattr(self, 'deck_layout', None) is not None:
+            try:
+                self.deck_layout.info_cards.update_info(self.state)
+            except Exception:
+                pass
         self._apply_pitch_tempo()
 
     def _on_pitch_clicked(self, shift: int):
@@ -33,6 +38,11 @@ class PitchTempoMixin:
                 else:
                     sign = "+" if shift > 0 else ""
                     btn.setText(f"{sign}{shift}")
+        if getattr(self, 'deck_layout', None) is not None:
+            try:
+                self.deck_layout.info_cards.update_info(self.state)
+            except Exception:
+                pass
 
     def _apply_pitch_tempo(self):
         if not self.state.originals:
@@ -68,23 +78,31 @@ class PitchTempoMixin:
                 return
 
         self.status_label.setText("Aplicando pitch/tempo ...")
+        self._sync_deck_status("Aplicando pitch/tempo ...")
         self.progress_bar.setVisible(True)
+        self._sync_deck_progress(0, True)
         fx_map = {name: data.get("fx_enabled", True) for name, data in self.state.stems.items()}
         new_thread = PitchTempoThread(
             self.state.originals, self.state.current_pitch_shift,
             self.state.current_tempo_ratio, fx_map, self.state.mix_sr
         )
         new_thread.progress.connect(self._on_pt_progress)
-        new_thread.progress_pct.connect(self.progress_bar.setValue)
+        new_thread.progress_pct.connect(self._on_pt_progress_pct)
         new_thread.finished_processing.connect(self._on_pt_finished)
         new_thread.error.connect(self._on_pt_error)
         self.threads._pt_cache_dir = cache_folder if self.state.current_song_source == "library" else None
         self.progress_bar.setVisible(True)
+        self._sync_deck_progress(0, True)
         self.threads.safe_replace('pitch_tempo_thread', new_thread)
         self.threads.safe_start(self.threads.pitch_tempo_thread)
 
     def _on_pt_progress(self, msg: str):
         self.status_label.setText(msg)
+        self._sync_deck_status(msg)
+
+    def _on_pt_progress_pct(self, pct: int):
+        self.progress_bar.setValue(pct)
+        self._sync_deck_progress(pct, True)
 
     def _on_pt_finished(self, updated: dict):
         sender = self.sender()
@@ -119,12 +137,16 @@ class PitchTempoMixin:
                 self.lib_mgr.save_metadata(self.state.current_song_name, meta)
 
         self.progress_bar.setVisible(False)
+        self._sync_deck_progress(0, False)
         self.status_label.setText("Listo")
+        self._sync_deck_status("Listo")
         self.threads.pitch_tempo_thread = None
 
     def _on_pt_error(self, msg: str):
         self.status_label.setText(f"Error: {msg}")
+        self._sync_deck_status(f"Error: {msg}")
         self.progress_bar.setVisible(False)
+        self._sync_deck_progress(0, False)
         self.threads.pitch_tempo_thread = None
 
     def _reset_all(self):
@@ -173,6 +195,15 @@ class PitchTempoMixin:
         self.metronome_volume_slider.setVisible(False)
         self.metronome_pan_slider.setVisible(False)
         self.metro_icon_btn.setEnabled(False)
+        if getattr(self, 'deck_layout', None) is not None:
+            try:
+                self.deck_layout.deck_count_in_combo.setCurrentIndex(0)
+                self.deck_layout.deck_click_check.setChecked(False)
+                self.deck_layout.deck_metro_vol_slider.setVisible(False)
+                self.deck_layout.deck_metro_pan_slider.setVisible(False)
+                self.deck_layout.deck_metro_icon_btn.setEnabled(False)
+            except Exception:
+                pass
         self._rebuild_stems_ui()
         self.state.has_unsaved_changes = False
         self._update_save_buttons()

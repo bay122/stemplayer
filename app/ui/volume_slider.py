@@ -5,6 +5,8 @@ from PySide6.QtGui import QPainter, QPen, QFont, QColor
 from PySide6.QtCore import QRect
 from PySide6.QtSvg import QSvgRenderer
 
+from app.ui.theme import current as theme
+
 
 class VolumeSlider(QWidget):
     """Custom horizontal volume slider with dB scale and enhanced design."""
@@ -88,13 +90,13 @@ class VolumeSlider(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        painter.fillRect(self.rect(), QColor(42, 42, 42))
+        painter.fillRect(self.rect(), QColor(theme.BG_TERTIARY))
         y_offset = -8
 
         groove_rect = QRect(10, self.height() // 2 - 4 + y_offset, self.width() - 20, 8)
-        painter.fillRect(groove_rect, QColor(68, 68, 68))
+        painter.fillRect(groove_rect, QColor(theme.SLIDER_GROOVE))
 
-        painter.setPen(QPen(QColor(150, 150, 150), 1))
+        painter.setPen(QPen(QColor(theme.SLIDER_TEXT), 1))
         painter.setFont(QFont("Arial", 7))
 
         for ratio, value, label in self.scale_points:
@@ -107,7 +109,7 @@ class VolumeSlider(QWidget):
             fill_x = self._value_to_x(self._value)
             fill_rect = QRect(groove_rect.left(), groove_rect.top(),
                              fill_x - groove_rect.left(), groove_rect.height())
-            painter.fillRect(fill_rect, QColor(0, 120, 215))
+            painter.fillRect(fill_rect, QColor(theme.ACCENT_PRIMARY))
 
         handle_x = self._value_to_x(self._value)
         handle_rect = QRect(handle_x - 14, self.height() // 2 - 16 + y_offset, 28, 32)
@@ -115,8 +117,8 @@ class VolumeSlider(QWidget):
         if self.handle_icon:
             self.handle_icon.render(painter, handle_rect)
         else:
-            painter.fillRect(handle_rect, QColor(0, 120, 215))
-            painter.setPen(QPen(QColor(255, 255, 255), 1))
+            painter.fillRect(handle_rect, QColor(theme.ACCENT_PRIMARY))
+            painter.setPen(QPen(QColor(theme.TEXT_PRIMARY), 1))
             painter.drawRect(handle_rect)
 
     def mousePressEvent(self, event):

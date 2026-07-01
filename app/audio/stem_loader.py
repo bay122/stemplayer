@@ -109,6 +109,16 @@ class StemLoaderThread(QThread):
                 muted = is_click or any(x in fname for x in self.stem_filters["guide_patterns"])
                 fx_enabled = not any(x in fname for x in self.stem_filters["no_fx_patterns"])
 
+                from app.utils.stem_classifier import get_stem_category
+                if is_click:
+                    category = "Ref"
+                elif any(x in fname for x in self.stem_filters["guide_patterns"]):
+                    category = "Ref"
+                elif not fx_enabled:
+                    category = "Drums"
+                else:
+                    category = get_stem_category(stem_name)
+
                 with stems_lock:
                     stems[stem_name] = {
                         "audio": audio,
@@ -117,7 +127,7 @@ class StemLoaderThread(QThread):
                         "pan": 0.0,
                         "muted": muted,
                         "solo": False,
-                        "category": "Click" if is_click else ("Drums" if not fx_enabled else "Other"),
+                        "category": category,
                         "fx_enabled": fx_enabled,
                     }
                     originals[stem_name] = original_audio.copy()

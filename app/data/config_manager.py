@@ -86,6 +86,22 @@ class ConfigManager:
 				"no_fx_patterns": ["drum", "drums", "bateria", "batería"],
 			},
 			"stream_port": 8080,
+			"splash_muted": False,
+			"category_colors": {
+				"Vocals":     "#FF5555",
+				"Drums":      "#FFAA00",
+				"Percussion": "#FF6644",
+				"Bass":       "#FFCC00",
+				"Guitars":    "#55CC55",
+				"Keys":       "#5555AA",
+				"Strings":    "#00BFFF",
+				"Brass":      "#FF8800",
+				"Winds":      "#88CCFF",
+				"Synths":     "#CC88FF",
+				"FX":         "#888888",
+				"Ref":        "#666666",
+				"Other":      "#AAAAAA",
+			},
 		}
 
 	# ---- API pública ----
@@ -245,6 +261,28 @@ class ConfigManager:
 
 	def set_stream_port(self, port: int):
 		self.config["stream_port"] = port
+		self._save()
+
+	# ---- Splash ----
+
+	def get_splash_muted(self) -> bool:
+		return self.config.get("splash_muted", False)
+
+	def set_splash_muted(self, muted: bool):
+		self.config["splash_muted"] = muted
+		self._save()
+
+	# ---- Colores de categorías ----
+
+	def get_category_colors(self) -> dict:
+		defaults = self._defaults()["category_colors"]
+		stored = self.config.get("category_colors", {})
+		merged = dict(defaults)
+		merged.update(stored)
+		return merged
+
+	def set_category_colors(self, colors: dict):
+		self.config["category_colors"] = dict(colors)
 		self._save()
 
 

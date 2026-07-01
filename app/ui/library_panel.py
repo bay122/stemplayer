@@ -12,6 +12,7 @@ from PySide6.QtCore import Signal, Qt
 from app.ui.svg_icon import svg_icon
 from app.ui.theme import current as theme
 from app.data.library_manager import get_library_songs, get_song_metadata, rename_song_folder, delete_song_folder
+from app.utils.stem_classifier import get_stem_category
 from app.ui.settings_dialog import SettingsDialog
 from app.ui.collapsible_section import CollapsibleSection
 
@@ -23,6 +24,7 @@ class LibraryPanel(QWidget):
 	song_export_requested = Signal(str, str)
 	settings_changed = Signal()
 	section_toggled = Signal()
+	stems_reclassified = Signal(str, list)
 
 	def __init__(self, config_mgr, icons_dir, parent=None):
 		super().__init__(parent)
@@ -64,36 +66,38 @@ class LibraryPanel(QWidget):
 		self.lib_combo.currentIndexChanged.connect(self._on_library_changed)
 		top_row.addWidget(self.lib_combo, 1)
 
-		self.add_lib_btn = QPushButton("+")
+		self.add_lib_btn = QPushButton()
 		self.add_lib_btn.setFixedSize(24, 24)
+		self.add_lib_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-plus.svg")))
 		self.add_lib_btn.setToolTip("Añadir nueva librería")
 		self.add_lib_btn.setStyleSheet(f"""
 			QPushButton {{
 				background-color: {theme.ACCENT_SUCCESS};
-				color: #FFF;
+				color: {theme.TEXT_PRIMARY};
 				border: none;
 				border-radius: 3px;
 				font-weight: bold;
 				font-size: 13px;
 			}}
-			QPushButton:hover {{ background-color: #66BB6A; }}
+			QPushButton:hover {{ background-color: {theme.ACCENT_SUCCESS_HOVER}; }}
 		""")
 		self.add_lib_btn.clicked.connect(self._add_library)
 		top_row.addWidget(self.add_lib_btn)
 
-		self.del_lib_btn = QPushButton("−")
+		self.del_lib_btn = QPushButton()
 		self.del_lib_btn.setFixedSize(24, 24)
 		self.del_lib_btn.setToolTip("Eliminar librería seleccionada")
+		self.del_lib_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-eraser.svg")))
 		self.del_lib_btn.setStyleSheet(f"""
 			QPushButton {{
 				background-color: {theme.ACCENT_DANGER_ALT};
-				color: #FFF;
+				color: {theme.TEXT_PRIMARY};
 				border: none;
 				border-radius: 3px;
 				font-weight: bold;
 				font-size: 13px;
 			}}
-			QPushButton:hover {{ background-color: #FF3333; }}
+			QPushButton:hover {{ background-color: {theme.ACCENT_DANGER_ALT_HOVER}; }}
 		""")
 		self.del_lib_btn.clicked.connect(self._delete_library)
 		top_row.addWidget(self.del_lib_btn)
@@ -107,8 +111,9 @@ class LibraryPanel(QWidget):
 		self.lib_path_label.setWordWrap(True)
 		path_row.addWidget(self.lib_path_label, 1)
 
-		self.settings_btn = QPushButton("⚙")
+		self.settings_btn = QPushButton()
 		self.settings_btn.setFixedSize(24, 24)
+		self.settings_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-levels.svg")))
 		self.settings_btn.setToolTip("Configuración")
 		self.settings_btn.setStyleSheet(f"""
 			QPushButton {{
@@ -123,8 +128,9 @@ class LibraryPanel(QWidget):
 		self.settings_btn.clicked.connect(self._open_settings)
 		path_row.addWidget(self.settings_btn)
 
-		self.set_lib_btn = QPushButton("...")
+		self.set_lib_btn = QPushButton()
 		self.set_lib_btn.setToolTip("Cambiar carpeta de librería")
+		self.set_lib_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-open.svg")))
 		self.set_lib_btn.setFixedSize(24, 24)
 		self.set_lib_btn.setStyleSheet(f"""
 			QPushButton {{
@@ -179,20 +185,20 @@ class LibraryPanel(QWidget):
 		self.library_list.customContextMenuRequested.connect(self._on_context_menu)
 		lib_cl.addWidget(self.library_list, 1)
 
-		lib_load_btn = QPushButton("Cargar")
-		lib_load_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-open.svg")))
+		lib_load_btn = QPushButton()
+		lib_load_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "open-song.svg")))
 		lib_load_btn.setToolTip("Cargar la canción seleccionada desde la librería")
 		lib_load_btn.setStyleSheet(f"""
 			QPushButton {{
 				background-color: {theme.ACCENT_INFO};
-				color: #FFF;
+				color: {theme.TEXT_PRIMARY};
 				border: none;
 				border-radius: {theme.BORDER_RADIUS_SM};
 				padding: 4px 10px;
 				font-size: 11px;
 				font-weight: bold;
 			}}
-			QPushButton:hover {{ background-color: #42A5F5; }}
+			QPushButton:hover {{ background-color: {theme.ACCENT_INFO_HOVER}; }}
 		""")
 		lib_load_btn.clicked.connect(self._load_selected)
 		lib_cl.addWidget(lib_load_btn)
@@ -438,6 +444,8 @@ class LibraryPanel(QWidget):
 		menu.addSeparator()
 
 		cache_action = menu.addAction("Borrar cache...")
+		menu.addSeparator()
+		reclassify_action = menu.addAction("Reclasificar stems")
 		details_action = menu.addAction("Detalles")
 
 		action = menu.exec(self.library_list.mapToGlobal(pos))
@@ -465,6 +473,8 @@ class LibraryPanel(QWidget):
 			self.song_export_requested.emit(song_name, "wav_cfg")
 		elif action == cache_action:
 			self._show_cache_cleanup_dialog(song_name)
+		elif action == reclassify_action:
+			self._reclassify_stems(song_name)
 		elif action == details_action:
 			self._show_song_details_dialog(song_name)
 
@@ -490,6 +500,68 @@ class LibraryPanel(QWidget):
 			delete_song_folder(path, name)
 			self.refresh_ui()
 			self.song_deleted.emit(name)
+
+	def _reclassify_stems(self, song_name: str):
+		path = self.config_mgr.get_library_path()
+		meta = get_song_metadata(path, song_name)
+		if not meta or "stems" not in meta:
+			QMessageBox.information(self, "Reclasificar",
+				f"No se encontraron stems en '{song_name}'.")
+			return
+
+		reply = QMessageBox.question(self, "Reclasificar stems",
+			"Se sobrescribirán las clasificaciones actuales.\n"
+			"¿Deseas continuar?",
+			QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+		if reply != QMessageBox.Yes:
+			return
+
+		filters = self.config_mgr.get_stem_filters()
+		click_pats = filters.get("click_patterns", [])
+		guide_pats = filters.get("guide_patterns", [])
+		nofx_pats = filters.get("no_fx_patterns", [])
+
+		changes = []
+		for stem in meta.get("stems", []):
+			name = stem.get("name", "")
+			if not name:
+				continue
+			stem_name = os.path.splitext(name)[0]
+			name_lower = stem_name.lower()
+
+			is_click = any(p in name_lower for p in click_pats)
+			is_guide = any(p in name_lower for p in guide_pats)
+			is_nofx = any(p in name_lower for p in nofx_pats)
+
+			muted = is_click or is_guide
+			fx_enabled = not is_nofx
+
+			if is_click or is_guide:
+				category = "Ref"
+			elif is_nofx:
+				category = "Drums"
+			else:
+				category = get_stem_category(name, self.config_mgr)
+
+			old = {
+				"category": stem.get("category", "Other"),
+				"muted": stem.get("muted", False),
+				"fx_enabled": stem.get("fx_enabled", True),
+			}
+			if category != old["category"] or muted != old["muted"] or fx_enabled != old["fx_enabled"]:
+				changes.append({
+					"name": name,
+					"category": category,
+					"muted": muted,
+					"fx_enabled": fx_enabled,
+				})
+
+		if not changes:
+			QMessageBox.information(self, "Reclasificar",
+				"Todos los stems ya están correctamente clasificados.")
+			return
+
+		self.stems_reclassified.emit(song_name, changes)
 
 	@staticmethod
 	def _get_song_total_size(folder: str) -> int:
@@ -634,10 +706,10 @@ class LibraryPanel(QWidget):
 			item = self.library_list.item(i)
 			song_name = item.data(Qt.UserRole)
 
-			if song_name == current_song:
-				if is_playing and blink:
-					item.setIcon(svg_icon(os.path.join(icons_dir, "fad-speaker.svg"), "#00FF00"))
-				else:
-					item.setIcon(svg_icon(os.path.join(icons_dir, "fad-speaker.svg"), "#0078D7"))
+		if song_name == current_song:
+			if is_playing and blink:
+				item.setIcon(svg_icon(os.path.join(icons_dir, "fad-speaker.svg"), theme.SVG_ICON_PLAYING))
 			else:
-				item.setIcon(svg_icon(os.path.join(icons_dir, "fad-speaker.svg"), "#444444"))
+				item.setIcon(svg_icon(os.path.join(icons_dir, "fad-speaker.svg"), theme.ACCENT_PRIMARY))
+		else:
+			item.setIcon(svg_icon(os.path.join(icons_dir, "fad-speaker.svg"), theme.BORDER))

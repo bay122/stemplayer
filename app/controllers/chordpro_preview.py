@@ -16,6 +16,14 @@ class ChordProPreviewMixin:
             self.chordpro_preview_widget.load_chopro_content(chopro_path)
             self.chordpro_preview_widget.setVisible(True)
 
+            # También cargar en la instancia del deck
+            if self.deck_layout is not None and self.deck_layout._chordpro_preview is not None:
+                try:
+                    self.deck_layout._chordpro_preview.load_chopro_content(chopro_path)
+                    self.deck_layout._update_chordpro_section()
+                except Exception:
+                    pass
+
             if os.path.exists(sync_path):
                 self.live_display_widget.load_sync_data(chopro_path, sync_path)
 

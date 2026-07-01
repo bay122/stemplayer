@@ -1,4 +1,14 @@
-"""Ventana principal que orquesta todos los módulos de la aplicación."""
+"""Ventana principal que orquesta todos los módulos de la aplicación.
+
+Estructura:
+  QMainWindow
+  └── QWidget (central)
+      └── QHBoxLayout
+          ├── [0] lib_panel (Panel izquierdo — SIEMPRE visible)
+          └── [1] QStackedWidget (body_stack)
+              ├── [0] page_classic: centro + derecho (layout original)
+              └── [1] page_deck:    StemDeckLayout (layout alternativo)
+"""
 
 import os
 from PySide6.QtWidgets import (
@@ -9,7 +19,7 @@ from PySide6.QtWidgets import (
 	QMenu
 )
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QKeySequence, QShortcut
 
 from app.utils.paths import get_icons_dir
 from app.state_manager import StateManager
@@ -26,6 +36,7 @@ from app.ui.meters_panel import SystemMetersPanel
 from app.ui.chordpro_preview import ChordProPreviewWidget
 from app.ui.live_display import LiveChordWidget
 from app.ui.settings_dialog import SettingsDialog
+from app.ui.stemdeck_layout import StemDeckLayout
 
 from app.controllers.song_loading import SongLoadingMixin
 from app.controllers.save_library import SaveLibraryMixin
@@ -77,12 +88,26 @@ class StemPlayer(
 		self.chordpro_fullscreen_view = None
 		self.chordpro_path = None
 
+		self.current_layout = "classic"
+		self.deck_layout = None
+
 		self.blink_timer = QTimer(self)
 		self.blink_timer.timeout.connect(self._toggle_blink)
 		self.blink_timer.start(500)
 
 		self._build_ui()
 		apply_theme(self, self.theme)
+
+		shortcut = QShortcut(QKeySequence("Ctrl+L"), self)
+		shortcut.activated.connect(self._toggle_layout)
+
+		try:
+			preferred = self.config_mgr.config.get("ui_layout", "classic")
+		except Exception:
+			preferred = "classic"
+		if preferred == "deck":
+			self.body_stack.setCurrentIndex(1)
+			self.current_layout = "deck"
 
 	# ------------------------------------------------------------------
 	# UI Construction
@@ -91,36 +116,84 @@ class StemPlayer(
 		central = QWidget()
 		self.setCentralWidget(central)
 		main = QHBoxLayout(central)
-		main.setContentsMargins(0, 4, 8, 8)
-		main.setSpacing(6)
+		main.setContentsMargins(0, 0, 0, 0)
+		main.setSpacing(0)
+
+		self._build_left_panel(main)
+
+		self.body_stack = QStackedWidget()
+		main.addWidget(self.body_stack, 1)
+
+		page_classic = QWidget()
+		classic_layout = QHBoxLayout(page_classic)
+		classic_layout.setContentsMargins(0, 4, 8, 8)
+		classic_layout.setSpacing(6)
 
 		left_center_container = QWidget()
 		left_center_layout = QHBoxLayout(left_center_container)
 		left_center_layout.setContentsMargins(0, 0, 0, 0)
 		left_center_layout.setSpacing(0)
+		self._build_center_panel(left_center_layout)
+		classic_layout.addWidget(left_center_container, 1)
 
-		# ---- Left Panel ----
-		self._left_panel(left_center_layout)
-
-		# ---- Center Panel ----
-		self._center_panel(left_center_layout)
-
-		main.addWidget(left_center_container, 1)
-
-		# ---- Right Panel ----
 		right_panel = QWidget()
-		self._right_panel(right_panel)
+		self._build_right_panel(right_panel)
+		classic_layout.addWidget(right_panel, 0)
 
-		main.addWidget(right_panel, 0)
+		self.body_stack.addWidget(page_classic)
+
+		self.deck_layout = StemDeckLayout(self)
+		self.deck_layout.layout_change_requested.connect(self._switch_to_classic)
+		self.body_stack.addWidget(self.deck_layout)
 
 		self.collapse_btn = QPushButton(self)
-		self.collapse_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-h-expand.svg"), "#888888"))
+		self.collapse_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-h-expand.svg"), self.theme.SVG_ICON_MUTED))
 		self.collapse_btn.setFixedSize(24, 24)
 		self.collapse_btn.setToolTip("Expandir/Contraer panel izquierdo")
 		self.collapse_btn.clicked.connect(self._toggle_left_panel)
 		self.collapse_btn.move(6, 8)
 		self.collapse_btn.setStyleSheet("background: transparent; border: none; border-radius: 4px;")
 		self.collapse_btn.raise_()
+
+	# ------------------------------------------------------------------
+	# Layout switching
+	# ------------------------------------------------------------------
+	def _toggle_layout(self):
+		if self.current_layout == "classic":
+			self._switch_to_deck()
+		else:
+			self._switch_to_classic()
+
+	def _switch_to_deck(self):
+		if self.deck_layout is None:
+			return
+		self.body_stack.setCurrentIndex(1)
+		self.current_layout = "deck"
+		self.deck_layout.update_song_header(
+			self.state.current_song_name or "",
+			self.state.current_song_artist or ""
+		)
+		self.deck_layout.update_visibility(
+			self.state.current_song_source,
+			bool(self.state.current_song_name)
+		)
+		self.deck_layout.update_save_buttons()
+		self.deck_layout.rebuild_stems()
+		self._save_layout_choice("deck")
+
+	def _switch_to_classic(self):
+		if self.deck_layout is not None and self.deck_layout.toggle_live_btn.isChecked():
+			self.deck_layout.toggle_live_btn.setChecked(False)
+		self.body_stack.setCurrentIndex(0)
+		self.current_layout = "classic"
+		self._save_layout_choice("classic")
+
+	def _save_layout_choice(self, name: str):
+		try:
+			self.config_mgr.config["ui_layout"] = name
+			self.config_mgr.save()
+		except Exception:
+			pass
 
 	def _on_edit_key_clicked(self):
 		current_key = self.state.detected_key if self.state.detected_key else "C"
@@ -139,9 +212,30 @@ class StemPlayer(
 				if meta:
 					meta["detected_key"] = new_key
 					self.lib_mgr.save_metadata(self.state.current_song_name, meta)
+			if self.deck_layout is not None:
+				self.deck_layout.info_cards.update_info(self.state)
 
 	def _on_library_settings_changed(self):
 		self.live_display_widget.set_stream_port(self.config_mgr.get_stream_port())
+
+	def _on_stems_reclassified(self, song_name: str, changes: list):
+		if self.state.current_song_name != song_name:
+			return
+		for change in changes:
+			name = change["name"]
+			if name in self.state.stems:
+				self.state.stems[name]["category"] = change["category"]
+				self.state.stems[name]["muted"] = change["muted"]
+				self.state.stems[name]["fx_enabled"] = change["fx_enabled"]
+		self._rebuild_stems_ui()
+		self._push_state_if_needed()
+
+	def _on_reclassify_stems_clicked(self):
+		song_name = self.state.current_song_name
+		if not song_name:
+			QMessageBox.warning(self, "Recalcular stems", "No hay ninguna canción cargada.")
+			return
+		self.library_widget._reclassify_stems(song_name)
 
 	def _open_settings(self):
 		filters = self.config_mgr.get_stem_filters()
@@ -150,12 +244,17 @@ class StemPlayer(
 		if dialog.exec() == SettingsDialog.Accepted:
 			self.config_mgr.set_stem_filters(dialog.get_stem_filters())
 			self.config_mgr.set_stream_port(dialog.get_stream_port())
+			self.config_mgr.set_category_colors(dialog.get_category_colors())
 			self.live_display_widget.set_stream_port(self.config_mgr.get_stream_port())
+			if self.deck_layout is not None:
+				self.deck_layout.rebuild_stems()
+				self.deck_layout.refresh_info_cards()
+			if self.chordpro_preview_widget is not None:
+				self.chordpro_preview_widget.set_icons_dir(self.icons_dir)
 
 	# -- ---------------------------------- --
-	# -- ---------------------------------- --
 	# Left Panel
-	def _left_panel(self, left_center_layout):
+	def _build_left_panel(self, main_layout):
 		self.lib_panel = QWidget()
 		self.lib_panel.setFixedWidth(340)
 		lib_layout = QVBoxLayout(self.lib_panel)
@@ -168,6 +267,7 @@ class StemPlayer(
 		self.library_widget.song_deleted.connect(self._on_library_song_deleted)
 		self.library_widget.song_export_requested.connect(self._on_song_export_requested)
 		self.library_widget.settings_changed.connect(self._on_library_settings_changed)
+		self.library_widget.stems_reclassified.connect(self._on_stems_reclassified)
 		self.library_widget.library_list.itemClicked.connect(self._on_library_item_clicked)
 		lib_layout.addWidget(self.library_widget)
 
@@ -180,46 +280,79 @@ class StemPlayer(
 		self.sidebar_spacer.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
 		lib_layout.addWidget(self.sidebar_spacer)
 
-		# Connect section_toggled signals
 		self.library_widget.section_toggled.connect(self._update_left_panel_layout)
 		self.setlist_widget.section_toggled.connect(self._update_left_panel_layout)
+		
+		self.layout_toggle_btn = QPushButton("Layout", self)
+		self.layout_toggle_btn.setFixedSize(68, 24)
+		self.layout_toggle_btn.setToolTip("Cambiar layout (Ctrl+L) — clásico/Waveform")
+		self.layout_toggle_btn.clicked.connect(self._toggle_layout)
+		#self.layout_toggle_btn.move(32, 8)
+		self.layout_toggle_btn.setStyleSheet(f"""
+			QPushButton {{
+				background-color: {self.theme.BG_TERTIARY};
+				color: {self.theme.TEXT_PRIMARY};
+				border: 1px solid {self.theme.BORDER};
+				border-radius: {self.theme.BORDER_RADIUS_SM};
+				font-size: 11px;
+			}}
+			QPushButton:hover {{
+				background-color: {self.theme.HOVER_BRIGHTEN};
+			}}
+		""")
+		self.layout_toggle_btn.raise_()
+		lib_layout.addWidget(self.layout_toggle_btn)
 
-		# Initial layout update
 		self._update_left_panel_layout()
 
-		left_center_layout.addWidget(self.lib_panel)
+		main_layout.addWidget(self.lib_panel)
 
 	def _update_left_panel_layout(self):
-		# Count expanded sections in LibraryPanel
+		if not hasattr(self, 'lib_panel'):
+			return
+
+		lib_layout = self.lib_panel.layout()
 		lib_expanded_count = 0
+		setlist_expanded_count = 0
+		all_collapsed = True
+
 		if hasattr(self, 'library_widget'):
 			if not self.library_widget._songs_section._collapsed:
 				lib_expanded_count += 1
+				all_collapsed = False
 			if not self.library_widget._fav_section._collapsed:
 				lib_expanded_count += 1
+				all_collapsed = False
 			if not self.library_widget._recent_section._collapsed:
 				lib_expanded_count += 1
+				all_collapsed = False
 
-		# Count expanded sections in SetlistPanel
-		setlist_expanded_count = 0
 		if hasattr(self, 'setlist_widget'):
 			if not self.setlist_widget._section._collapsed:
 				setlist_expanded_count += 1
+				all_collapsed = False
 
-		# Update stretch factors in lib_layout
-		lib_layout = self.lib_panel.layout()
+		# Distribución proporcional: cada panel (library/setlist) recibe stretch
+		# proporcional al número de secciones expandidas que contiene.
 		lib_layout.setStretchFactor(self.library_widget, lib_expanded_count)
 		lib_layout.setStretchFactor(self.setlist_widget, setlist_expanded_count)
 
-		# Update bottom spacer visibility and stretch factor
-		all_collapsed = (lib_expanded_count == 0) and (setlist_expanded_count == 0)
+		# Ajustar SizePolicy del library_widget y setlist_widget
+		if lib_expanded_count > 0:
+			self.library_widget.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+		else:
+			self.library_widget.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+		if setlist_expanded_count > 0:
+			self.setlist_widget.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+		else:
+			self.setlist_widget.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+
 		self.sidebar_spacer.setVisible(all_collapsed)
 		lib_layout.setStretchFactor(self.sidebar_spacer, 1 if all_collapsed else 0)
 
 	# -- ---------------------------------- --
-	# -- ---------------------------------- --
 	# Center Panel
-	def _center_panel(self, left_center_layout):
+	def _build_center_panel(self, left_center_layout):
 		center_panel = QWidget()
 		center_layout = QVBoxLayout(center_panel)
 		center_layout.setContentsMargins(40, 0, 10, 0)
@@ -303,7 +436,7 @@ class StemPlayer(
 		metro_row.setSpacing(8)
 
 		metro_icon_btn = QPushButton()
-		metro_icon_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-metronome.svg"), "#888888"))
+		metro_icon_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-metronome.svg"), self.theme.SVG_ICON_MUTED))
 		metro_icon_btn.setFixedSize(24, 24)
 		metro_icon_btn.setToolTip("Volumen del metrónomo")
 		metro_icon_btn.setEnabled(False)
@@ -369,7 +502,7 @@ class StemPlayer(
 		chordpro_button_row.setSpacing(6)
 
 		self.chordpro_close_fullscreen_btn = QPushButton("Cerrar Preview")
-		self.chordpro_close_fullscreen_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-close-x.svg"), "#FF5555"))
+		self.chordpro_close_fullscreen_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-close-x.svg"), self.theme.SVG_ICON_DANGER))
 		self.chordpro_close_fullscreen_btn.setMinimumHeight(28)
 		self.chordpro_close_fullscreen_btn.setToolTip("Cerrar la vista previa de ChordPro en pantalla completa")
 		self.chordpro_close_fullscreen_btn.clicked.connect(self._hide_chordpro_fullscreen)
@@ -431,10 +564,10 @@ class StemPlayer(
 		self.generate_chordpro_btn.setVisible(False)
 		save_row.addWidget(self.generate_chordpro_btn)
 
-		self.toggle_live_btn = QPushButton("Karaoke")
+		self.toggle_live_btn = QPushButton("Live Chords")
 		self.toggle_live_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-microphone.svg")))
 		self.toggle_live_btn.setFixedHeight(28)
-		self.toggle_live_btn.setToolTip("Activar/desactivar el modo karaoke en vivo")
+		self.toggle_live_btn.setToolTip("Activar/desactivar el modo Live Chords")
 		self.toggle_live_btn.setCheckable(True)
 		self.toggle_live_btn.toggled.connect(self._toggle_live_mode)
 		self.toggle_live_btn.setVisible(False)
@@ -442,9 +575,10 @@ class StemPlayer(
 
 		save_row.addStretch()
 
-		self.more_btn = QPushButton("⋮")
+		self.more_btn = QPushButton()
 		self.more_btn.setFixedSize(28, 28)
 		self.more_btn.setToolTip("Más opciones")
+		self.more_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-levels.svg")))
 		self.more_btn.setVisible(False)
 		self.more_menu = QMenu(self)
 		self._save_as_action = self.more_menu.addAction(
@@ -454,6 +588,8 @@ class StemPlayer(
 		self._regenerate_sync_action = self.more_menu.addAction(
 			svg_icon(os.path.join(self.icons_dir, "fad-repeat.svg")), "Regenerar Sync (Whisper)", self._on_regenerate_sync_clicked)
 		self._edit_sync_action = self.more_menu.addAction("Editar Sync...", self._on_edit_sync_clicked)
+		self._reclassify_stems_action = self.more_menu.addAction(
+			svg_icon(os.path.join(self.icons_dir, "fad-repeat.svg")), "Recalcular stems", self._on_reclassify_stems_clicked)
 		self.more_menu.addSeparator()
 		self._add_to_setlist_action = self.more_menu.addAction(
 			svg_icon(os.path.join(self.icons_dir, "fad-plus.svg")), "Añadir a Setlist", self._on_add_to_setlist_clicked)
@@ -467,7 +603,7 @@ class StemPlayer(
 	def _build_close_row(self, center_layout):
 		close_row = QHBoxLayout()
 		self.close_song_btn = QPushButton("Cerrar Canción")
-		self.close_song_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-close-x.svg"), "#FF5555"))
+		self.close_song_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-close-x.svg"), self.theme.SVG_ICON_DANGER))
 		self.close_song_btn.setMinimumHeight(36)
 		self.close_song_btn.setToolTip("Cerrar la canción actual y liberar recursos")
 		self.close_song_btn.clicked.connect(self._close_song)
@@ -479,9 +615,8 @@ class StemPlayer(
 		center_layout.addLayout(close_row)
 
 	# -- ---------------------------------- --
-	# -- ---------------------------------- --
 	# Right Panel
-	def _right_panel(self, right_panel):
+	def _build_right_panel(self, right_panel):
 		right_layout = QVBoxLayout(right_panel)
 		right_layout.setContentsMargins(0, 0, 0, 0)
 		right_layout.setSpacing(12)
@@ -499,7 +634,7 @@ class StemPlayer(
 		self.key_label.setStyleSheet(f"color: {self.theme.ACCENT_CYAN};")
 		key_row.addWidget(self.key_label, 1)
 		self.edit_key_btn = QPushButton()
-		self.edit_key_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-pen.svg"), "#888888"))
+		self.edit_key_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-pen.svg"), self.theme.SVG_ICON_MUTED))
 		self.edit_key_btn.setFixedSize(28, 28)
 		self.edit_key_btn.setToolTip("Editar tonalidad detectada")
 		self.edit_key_btn.clicked.connect(self._on_edit_key_clicked)
@@ -638,7 +773,7 @@ class StemPlayer(
 		btn_row.addWidget(self.next_btn)
 
 		self.auto_play_btn = QPushButton()
-		self.auto_play_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-preset-ab.svg"), "#FFFFFF"))
+		self.auto_play_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-preset-ab.svg"), self.theme.SVG_ICON_ACTIVE))
 		self.auto_play_btn.setFixedSize(40, 40)
 		self.auto_play_btn.setCheckable(True)
 		self.auto_play_btn.setToolTip("Auto-avanzar y reproducir en setlist")

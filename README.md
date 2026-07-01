@@ -15,9 +15,9 @@ Aplicación de escritorio para reproducir, mezclar y transponer stems de audio i
 - **Exportación**: 4 modalidades — ZIP o WAV, con configuración actual o stems originales.
 - **Setlists**: Listas de reproducción con auto-avance, pre-carga y reordenación.
 - **Undo/Redo**: Historial completo de ajustes con detección de cambios no guardados.
-- **ChordPro**: Vista previa, editor con botones de acordes, exportación a PDF, modo karaoke.
+- **ChordPro**: Vista previa, editor con botones de acordes, exportación a PDF, modo Live Chords.
 - **Editor de Sync**: Editor visual con waveform, tabla de tiempos y previsualización ChordPro.
-- **Streaming karaoke**: Transmite la letra sincronizada a cualquier navegador en la red local vía HTTP + QR.
+- **Streaming Live Chords**: Transmite la letra sincronizada a cualquier navegador en la red local vía HTTP + QR.
 - **Procesamiento en hilos**: Sin bloquear la UI + centralización con ThreadManager.
 - **Temas externos**: Sistema de temas plugin con colores, QSS, iconos SVG y layout extensible (`-theme`).
 - **Múltiples librerías**: Varias carpetas de canciones con favoritos, recientes y búsqueda.
@@ -79,7 +79,7 @@ python main.py -theme theme3    # Tema con layout extendido
 6. **Guardar**: En la librería para persistir configuración.
 7. **Setlists**: Crea listas y navega con Prev/Next.
 8. **ChordPro**: Desde el menú "⋮" genera sheets, edita sync o abre el editor.
-9. **Stream karaoke**: En el panel de acordes, elige "Stream to browser (Web)" para compartir en la red.
+9. **Stream Live Chords**: En el panel de acordes, elige "Stream to browser (Web)" para compartir en la red.
 
 ## Documentación
 
