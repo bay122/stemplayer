@@ -69,7 +69,7 @@ Descarga la última versión desde [Releases](https://github.com/bay122/stemplay
 | Plataforma | Archivo | Requisitos |
 |------------|---------|------------|
 | **Linux** | `StemPlayer-v0.1.0-linux-x86_64.tar.gz` | Ninguno (autocontenido, ~800 MB) |
-| **Windows** | Compilar manualmente (ver instrucciones abajo) | Python 3.10+ |
+| **Windows** | `StemPlayer-v0.1.1-win64.zip` | Ninguno (autocontenido, ~185 MB) |
 
 > **Nota:** El binario Linux incluye TensorFlow completo (~800 MB). Para un tamaño menor, compila desde código.
 
