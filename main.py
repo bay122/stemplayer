@@ -11,7 +11,7 @@ from app.ext.loader import load_theme, load_layout
 
 SPLASH_VIDEO = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
-    "assets", "splash", "splash3.mp4"
+    "assets", "splash", "splash.mp4"
 )
 SPLASH_IMAGE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
