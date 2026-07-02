@@ -38,7 +38,7 @@ class OpenRouterProvider(AIProvider):
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
-            "HTTP-Referer": "https://localhost/stemsplayer",
+            "HTTP-Referer": "https://localhost/stemplayer",
             "X-Title": "Stem Player",
         }
 

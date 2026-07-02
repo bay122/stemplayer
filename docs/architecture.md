@@ -31,7 +31,7 @@ Usuario interactúa con UI
 ## Estructura del proyecto
 
 ```
-stemsplayer/
+stemplayer/
 ├── main.py                          # Punto de entrada
 ├── config.json                      # Config global (se crea automáticamente)
 ├── requirements.txt

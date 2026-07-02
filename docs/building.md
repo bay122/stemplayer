@@ -2,7 +2,7 @@
 
 ```bash
 # Usando PyInstaller (spec incluido)
-pyinstaller StemsPlayer.spec
+pyinstaller StemPlayer.spec
 ```
 
 ## Requisitos de compilación

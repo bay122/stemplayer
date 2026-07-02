@@ -52,7 +52,7 @@ WAV, MP3, M4A (AAC), FLAC.
 
 ```bash
 git clone <url-del-repo>
-cd stemsplayer
+cd stemplayer
 python -m venv penv
 source penv/bin/activate      # Linux/Mac
 pip install -r requirements.txt

@@ -24,12 +24,6 @@ wheels/
 .installed.cfg
 *.egg
 
-# PyInstaller
-#  Usually these files are written to a temporary folder during the build process
-#  and then cleaned up afterwards, but sometimes they are left behind.
-*.manifest
-*.spec
-
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
@@ -71,16 +65,21 @@ penv/
 # OS files
 .DS_Store
 Thumbs.db
+*:Zone.Identifier
 
 # Logs
 *.log
 
-# Audio
-*.wav
-*.mp3
+# Audio test files
+test/test_cancion/
+test/*.wav
 
-# Stemplayer
+# StemPlayer
 .env
 config.json
-OTROS/*
-docs/new_theme
+
+# Assets (large media files)
+assets/
+
+# Third-party and backup files
+OTROS/
