@@ -6,10 +6,14 @@ from PySide6.QtWidgets import (
     QComboBox, QFrame, QGridLayout
 )
 from PySide6.QtCore import Qt, QSettings, Signal
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QPixmap
 from app.ui.theme import current as theme
 from app.ui.svg_icon import svg_icon
 from app.services.providers import get_available_providers
+from app.version import (
+    APP_NAME, APP_VERSION, APP_AUTHOR, APP_AUTHOR_EMAIL,
+    APP_GITHUB, APP_WEBSITE, APP_LICENSE
+)
 
 
 # Categorías que se pueden personalizar
@@ -125,6 +129,7 @@ class SettingsDialog(QDialog):
         self._build_stem_filters_tab()
         self._build_streaming_tab()
         self._build_ai_tab()
+        self._build_about_tab()
 
         layout.addWidget(self.tabs)
 
@@ -481,6 +486,93 @@ class SettingsDialog(QDialog):
             settings.setValue(f"ai/model/{provider_id}", model)
 
         self.accept()
+
+    def _build_about_tab(self):
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        layout.setSpacing(8)
+        layout.setContentsMargins(16, 16, 16, 16)
+
+        header = QHBoxLayout()
+        header.setSpacing(16)
+
+        icon_path = os.path.join(
+            os.path.dirname(__file__), "..", "..", "assets", "icons", "icon.png"
+        )
+        icon_label = QLabel()
+        pixmap = QPixmap(icon_path)
+        if not pixmap.isNull():
+            icon_label.setPixmap(pixmap.scaled(72, 72, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        icon_label.setFixedSize(80, 80)
+        icon_label.setAlignment(Qt.AlignCenter)
+        header.addWidget(icon_label)
+
+        info_col = QVBoxLayout()
+        info_col.setSpacing(2)
+        name_label = QLabel(APP_NAME)
+        name_label.setStyleSheet(f"font-size: 20px; font-weight: bold; color: {theme.TEXT_PRIMARY};")
+        info_col.addWidget(name_label)
+
+        version_label = QLabel(f"Versión {APP_VERSION}")
+        version_label.setStyleSheet(f"font-size: 13px; color: {theme.TEXT_MUTED};")
+        info_col.addWidget(version_label)
+
+        desc_label = QLabel("Reproductor y mezclador de stems de audio")
+        desc_label.setWordWrap(True)
+        desc_label.setStyleSheet(f"font-size: 11px; color: {theme.TEXT_SECONDARY};")
+        info_col.addWidget(desc_label)
+
+        info_col.addStretch()
+        header.addLayout(info_col, 1)
+        layout.addLayout(header)
+
+        sep = QFrame()
+        sep.setFrameShape(QFrame.HLine)
+        sep.setStyleSheet(f"background-color: {theme.BORDER}; max-height: 1px;")
+        layout.addWidget(sep)
+
+        details_style = f"font-size: 12px; color: {theme.TEXT_PRIMARY};"
+        muted_style = f"font-size: 11px; color: {theme.TEXT_MUTED};"
+        link_style = f"font-size: 12px; color: {theme.ACCENT_INFO};"
+
+        details = QVBoxLayout()
+        details.setSpacing(4)
+
+        def row(label, value, is_link=False):
+            r = QHBoxLayout()
+            r.setSpacing(8)
+            l = QLabel(label)
+            l.setStyleSheet(muted_style)
+            l.setFixedWidth(80)
+            r.addWidget(l)
+            v = QLabel(value)
+            v.setStyleSheet(link_style if is_link else details_style)
+            v.setTextInteractionFlags(Qt.TextSelectableByMouse)
+            if is_link:
+                v.setOpenExternalLinks(True)
+            r.addWidget(v, 1)
+            details.addLayout(r)
+
+        row("Autor:", APP_AUTHOR)
+        row("Email:", APP_AUTHOR_EMAIL)
+        row("Web:", f'<a href="{APP_WEBSITE}" style="color: {theme.ACCENT_INFO};">{APP_WEBSITE}</a>', is_link=True)
+        row("GitHub:", f'<a href="{APP_GITHUB}" style="color: {theme.ACCENT_INFO};">{APP_GITHUB}</a>', is_link=True)
+        row("Licencia:", APP_LICENSE)
+
+        layout.addLayout(details)
+
+        layout.addStretch()
+
+        license_note = QLabel(
+            "Este software se distribuye bajo licencia CC BY-NC-SA 4.0.\n"
+            "Puedes compartir y modificar el código con atribución,\n"
+            "pero no está permitido su uso comercial."
+        )
+        license_note.setStyleSheet(f"font-size: 10px; color: {theme.TEXT_MUTED}; padding-top: 8px;")
+        license_note.setAlignment(Qt.AlignCenter)
+        layout.addWidget(license_note)
+
+        self.tabs.addTab(tab, "Acerca de")
 
     def get_stem_filters(self) -> dict:
         return self._stem_filters
