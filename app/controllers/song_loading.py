@@ -250,7 +250,7 @@ class SongLoadingMixin(DeckStatusMixin):
                 self.toggle_live_btn.setEnabled(False)
                 self.toggle_live_btn.setChecked(False)
                 self._edit_chordpro_action.setVisible(False)
-                self.center_stack.setCurrentIndex(0)
+                self.center_stack.setCurrentWidget(self.stems_scroll)
             self._load_chordpro_preview()
         else:
             self.live_display_widget.reset()
@@ -258,7 +258,7 @@ class SongLoadingMixin(DeckStatusMixin):
             self.toggle_live_btn.setEnabled(False)
             self.toggle_live_btn.setChecked(False)
             self._edit_chordpro_action.setVisible(False)
-            self.center_stack.setCurrentIndex(0)
+            self.center_stack.setCurrentWidget(self.stems_scroll)
             self.chordpro_preview_widget.setVisible(False)
 
         self._preload_next_setlist_song()

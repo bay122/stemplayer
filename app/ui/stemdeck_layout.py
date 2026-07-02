@@ -350,6 +350,18 @@ class StemDeckLayout(QWidget):
         self.more_btn = QPushButton()
         self.more_btn.setFixedSize(28, 28)
         self.more_btn.setToolTip("Más opciones")
+        self.more_btn.setStyleSheet("""
+			QPushButton::menu-indicator {
+				image: none;
+				width: 0px;
+				height: 0px;
+				margin: 0px;
+				padding: 0px;
+			}
+			QPushButton {
+				padding: 0px;
+			}
+		""")
         self.more_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-levels.svg")))
         self.more_btn.setVisible(False)
         layout.addWidget(self.more_btn)
@@ -651,6 +663,7 @@ class StemDeckLayout(QWidget):
         self.save_changes_btn.clicked.connect(m._save_changes)
         self.generate_chordpro_btn.clicked.connect(m._on_generate_chordpro_clicked)
         self.toggle_live_btn.toggled.connect(self._on_toggle_live)
+        m.live_display_widget.close_requested.connect(lambda: self.toggle_live_btn.setChecked(False))
         self.more_btn.setMenu(m.more_menu)
 
         self.info_cards.key_card_clicked.connect(self._open_pitch_popup)
@@ -912,6 +925,7 @@ class StemDeckLayout(QWidget):
             if self._karaoke_widget is not None:
                 self._karaoke_widget.setVisible(False)
                 self._karaoke_widget.setParent(None)
+                self.main.center_stack.addWidget(self._karaoke_widget)
             self.player_section.setVisible(True)
             self.status_row.setVisible(True)
             self.stems_scroll.setVisible(True)

@@ -153,7 +153,7 @@ class PlaybackMixin:
                         self.setlist_widget.play_next()
                     return
 
-                if self.center_stack.currentIndex() == 1:
+                if self.center_stack.currentWidget() == self.live_display_widget:
                     self.live_display_widget.update_position(current_seconds)
 
                 if getattr(self, 'deck_layout', None) is not None and self.deck_layout is not None:

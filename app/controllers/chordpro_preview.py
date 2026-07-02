@@ -55,9 +55,9 @@ class ChordProPreviewMixin:
 
     def _show_chordpro_fullscreen(self):
         if self.chordpro_path and os.path.exists(self.chordpro_path):
-            self.center_stack.setCurrentIndex(2)
+            self.center_stack.setCurrentWidget(self.chordpro_fullscreen_view)
         else:
             QMessageBox.warning(self, "Error", "No hay archivo de acordes cargado")
 
     def _hide_chordpro_fullscreen(self):
-        self.center_stack.setCurrentIndex(0)
+        self.center_stack.setCurrentWidget(self.stems_scroll)

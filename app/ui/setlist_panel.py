@@ -2,7 +2,7 @@ import os
 from PySide6.QtWidgets import (
 	QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
 	QListWidget, QComboBox, QInputDialog, QMessageBox, QListWidgetItem, QMenu,
-	QSizePolicy
+	QSizePolicy, QFrame
 )
 from PySide6.QtCore import Signal, Qt
 from app.ui.svg_icon import svg_icon
@@ -112,8 +112,20 @@ class SetlistPanel(QWidget):
 		setlist_btns.addWidget(self.save_btn)
 
 		setlist_layout.addLayout(setlist_btns)
+
+		separator = QFrame()
+		separator.setFrameShape(QFrame.HLine)
+		separator.setFrameShadow(QFrame.Sunken)
+		separator.setStyleSheet(f"""
+			background: {theme.BORDER};
+			max-height: 1px;
+			margin: 3px 4px;
+		""")
+		layout.addWidget(separator)
+
 		self._section = CollapsibleSection("Setlists", "setlists", config_mgr=self.config_mgr)
 		self._section.set_content(setlist_content)
+		self._section.updateContentMinimunHeight(180)
 		layout.addWidget(self._section)
 
 		# Connect toggled signal

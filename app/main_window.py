@@ -13,10 +13,10 @@ Estructura:
 import os
 from PySide6.QtWidgets import (
 	QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-	QLabel, QPushButton, QSlider, QProgressBar,
+	QLabel, QPushButton, QSlider, QProgressBar, QMessageBox,
 	QGroupBox, QCheckBox, QSpinBox, QScrollArea, QFrame, QSizePolicy,
 	QComboBox, QTextEdit, QStackedWidget, QLineEdit, QInputDialog,
-	QMenu
+	QMenu, QSplitter
 )
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont, QKeySequence, QShortcut
@@ -240,7 +240,7 @@ class StemPlayer(
 	def _open_settings(self):
 		filters = self.config_mgr.get_stem_filters()
 		port = self.config_mgr.get_stream_port()
-		dialog = SettingsDialog(filters, port, config_mgr=self.config_mgr, parent=self)
+		dialog = SettingsDialog(filters, port, config_mgr=self.config_mgr, icons_dir=self.icons_dir, parent=self)
 		if dialog.exec() == SettingsDialog.Accepted:
 			self.config_mgr.set_stem_filters(dialog.get_stem_filters())
 			self.config_mgr.set_stream_port(dialog.get_stream_port())
@@ -261,6 +261,9 @@ class StemPlayer(
 		lib_layout.setContentsMargins(8, 8, 8, 8)
 		lib_layout.setSpacing(8)
 
+		self.splitter = QSplitter(Qt.Vertical)
+		self.splitter.setChildrenCollapsible(False)
+
 		self.library_widget = LibraryPanel(self.config_mgr, self.icons_dir, self)
 		self.library_widget.song_load_requested.connect(self._on_song_load_requested)
 		self.library_widget.song_renamed.connect(self._on_library_song_renamed)
@@ -269,16 +272,18 @@ class StemPlayer(
 		self.library_widget.settings_changed.connect(self._on_library_settings_changed)
 		self.library_widget.stems_reclassified.connect(self._on_stems_reclassified)
 		self.library_widget.library_list.itemClicked.connect(self._on_library_item_clicked)
-		lib_layout.addWidget(self.library_widget)
+		self.splitter.addWidget(self.library_widget)
 
 		self.setlist_widget = SetlistPanel(self.config_mgr, self.icons_dir, self)
 		self.setlist_widget.song_load_requested.connect(self._on_song_load_requested)
 		self.setlist_widget.setlist_songs_list.itemClicked.connect(self._on_setlist_item_clicked)
-		lib_layout.addWidget(self.setlist_widget)
+		self.splitter.addWidget(self.setlist_widget)
 
-		self.sidebar_spacer = QWidget()
-		self.sidebar_spacer.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
-		lib_layout.addWidget(self.sidebar_spacer)
+		lib_layout.addWidget(self.splitter, 1)
+
+		self.left_spacer = QWidget()
+		self.left_spacer.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+		lib_layout.addWidget(self.left_spacer)
 
 		self.library_widget.section_toggled.connect(self._update_left_panel_layout)
 		self.setlist_widget.section_toggled.connect(self._update_left_panel_layout)
@@ -287,18 +292,21 @@ class StemPlayer(
 		self.layout_toggle_btn.setFixedSize(68, 24)
 		self.layout_toggle_btn.setToolTip("Cambiar layout (Ctrl+L) — clásico/Waveform")
 		self.layout_toggle_btn.clicked.connect(self._toggle_layout)
-		#self.layout_toggle_btn.move(32, 8)
 		self.layout_toggle_btn.setStyleSheet(f"""
 			QPushButton {{
-				background-color: {self.theme.BG_TERTIARY};
-				color: {self.theme.TEXT_PRIMARY};
+				background-color: {self.theme.BUTTON_BG};
 				border: 1px solid {self.theme.BORDER};
 				border-radius: {self.theme.BORDER_RADIUS_SM};
+				color: {self.theme.TEXT_PRIMARY};
 				font-size: 11px;
 			}}
 			QPushButton:hover {{
 				background-color: {self.theme.HOVER_BRIGHTEN};
 			}}
+            QPushButton:checked {{
+                background-color: {self.theme.ACCENT_PRIMARY};
+                border: 1px solid {self.theme.ACCENT_PRIMARY};
+            }}
 		""")
 		self.layout_toggle_btn.raise_()
 		lib_layout.addWidget(self.layout_toggle_btn)
@@ -308,47 +316,58 @@ class StemPlayer(
 		main_layout.addWidget(self.lib_panel)
 
 	def _update_left_panel_layout(self):
-		if not hasattr(self, 'lib_panel'):
+		if not hasattr(self, 'splitter'):
 			return
 
-		lib_layout = self.lib_panel.layout()
-		lib_expanded_count = 0
-		setlist_expanded_count = 0
-		all_collapsed = True
+		lib_expanded = 0
+		setlist_expanded = 0
 
 		if hasattr(self, 'library_widget'):
 			if not self.library_widget._songs_section._collapsed:
-				lib_expanded_count += 1
-				all_collapsed = False
+				lib_expanded += 1
 			if not self.library_widget._fav_section._collapsed:
-				lib_expanded_count += 1
-				all_collapsed = False
+				lib_expanded += 1
 			if not self.library_widget._recent_section._collapsed:
-				lib_expanded_count += 1
-				all_collapsed = False
+				lib_expanded += 1
 
 		if hasattr(self, 'setlist_widget'):
 			if not self.setlist_widget._section._collapsed:
-				setlist_expanded_count += 1
-				all_collapsed = False
+				setlist_expanded += 1
 
-		# Distribución proporcional: cada panel (library/setlist) recibe stretch
-		# proporcional al número de secciones expandidas que contiene.
-		lib_layout.setStretchFactor(self.library_widget, lib_expanded_count)
-		lib_layout.setStretchFactor(self.setlist_widget, setlist_expanded_count)
+		all_collapsed = (lib_expanded == 0 and setlist_expanded == 0)
 
-		# Ajustar SizePolicy del library_widget y setlist_widget
-		if lib_expanded_count > 0:
-			self.library_widget.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+		if all_collapsed:
+			self.splitter.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+			self.left_spacer.setVisible(True)
+			self.splitter.setStretchFactor(0, 0)
+			self.splitter.setStretchFactor(1, 0)
+			lib_min = self.library_widget.minimumSizeHint().height()
+			set_min = self.setlist_widget.minimumSizeHint().height()
+			self.splitter.setSizes([lib_min, set_min])
 		else:
-			self.library_widget.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
-		if setlist_expanded_count > 0:
-			self.setlist_widget.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
-		else:
-			self.setlist_widget.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+			self.splitter.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+			self.left_spacer.setVisible(False)
 
-		self.sidebar_spacer.setVisible(all_collapsed)
-		lib_layout.setStretchFactor(self.sidebar_spacer, 1 if all_collapsed else 0)
+		total_h = self.splitter.height()
+
+		if lib_expanded > 0 and setlist_expanded > 0:
+			# Ambos expandidos → SetlistPanel ~20%
+			self.splitter.setStretchFactor(0, 4)
+			self.splitter.setStretchFactor(1, 1)
+			if total_h > 0:
+				self.splitter.setSizes([int(total_h * 0.8), int(total_h * 0.2)])
+		elif lib_expanded == 0 and setlist_expanded > 0:
+			# Library solo headers, SetlistPanel ocupa el resto
+			self.splitter.setStretchFactor(0, 0)
+			self.splitter.setStretchFactor(1, 1)
+			lib_min = self.library_widget.minimumSizeHint().height()
+			if total_h > lib_min:
+				self.splitter.setSizes([lib_min, total_h - lib_min])
+		elif lib_expanded > 0 and setlist_expanded == 0:
+			self.splitter.setStretchFactor(0, 1)
+			self.splitter.setStretchFactor(1, 0)
+
+		self.splitter.updateGeometry()
 
 	# -- ---------------------------------- --
 	# Center Panel
@@ -474,19 +493,19 @@ class StemPlayer(
 		center_layout.addLayout(metro_row_2)
 
 	def _build_stems_area(self, center_layout):
-		scroll = QScrollArea()
-		scroll.setWidgetResizable(True)
-		scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-		scroll.setFrameShape(QFrame.NoFrame)
+		self.stems_scroll = QScrollArea()
+		self.stems_scroll.setWidgetResizable(True)
+		self.stems_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+		self.stems_scroll.setFrameShape(QFrame.NoFrame)
 		self.stems_container = QWidget()
 		self.stems_layout = QVBoxLayout(self.stems_container)
 		self.stems_layout.setAlignment(Qt.AlignTop)
 		self.stems_layout.setSpacing(8)
 		self.stems_layout.setContentsMargins(4, 4, 4, 4)
-		scroll.setWidget(self.stems_container)
+		self.stems_scroll.setWidget(self.stems_container)
 
 		self.center_stack = QStackedWidget()
-		self.center_stack.addWidget(scroll)
+		self.center_stack.addWidget(self.stems_scroll)
 
 		self.live_display_widget = LiveChordWidget()
 		self.live_display_widget.set_stream_port(self.config_mgr.get_stream_port())
@@ -578,6 +597,32 @@ class StemPlayer(
 		self.more_btn = QPushButton()
 		self.more_btn.setFixedSize(28, 28)
 		self.more_btn.setToolTip("Más opciones")
+		self.more_btn.setStyleSheet("""
+			QPushButton::menu-indicator {
+				image: none;
+				width: 0px;
+				height: 0px;
+				margin: 0px;
+				padding: 0px;
+			}
+			QPushButton {
+				padding: 0px;
+			}
+			QPushButton {{
+                background-color: {theme.BUTTON_BG};
+                border: 1px solid {theme.BORDER};
+                border-radius: {theme.BORDER_RADIUS_MD};
+                color: {theme.TEXT_PRIMARY};
+                padding: 4px 10px;
+            }}
+            QPushButton:hover {{
+                background-color: {theme.HOVER_BRIGHTEN};
+            }}
+            QPushButton:checked {{
+                background-color: {theme.ACCENT_PRIMARY};
+                border: 1px solid {theme.ACCENT_PRIMARY};
+            }}
+		""")
 		self.more_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-levels.svg")))
 		self.more_btn.setVisible(False)
 		self.more_menu = QMenu(self)

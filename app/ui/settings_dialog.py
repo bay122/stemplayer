@@ -1,3 +1,4 @@
+import os
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QListWidget, QLineEdit, QDialogButtonBox, QGroupBox,
@@ -7,6 +8,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QSettings, Signal
 from PySide6.QtGui import QColor
 from app.ui.theme import current as theme
+from app.ui.svg_icon import svg_icon
 from app.services.providers import get_available_providers
 
 
@@ -66,12 +68,13 @@ from PySide6.QtWidgets import QColorDialog
 
 
 class SettingsDialog(QDialog):
-    def __init__(self, stem_filters: dict, stream_port: int, config_mgr=None, parent=None):
+    def __init__(self, stem_filters: dict, stream_port: int, config_mgr=None, icons_dir=None, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Configuración")
         self.setMinimumWidth(580)
         self.setMinimumHeight(480)
         self.config_mgr = config_mgr
+        self.icons_dir = icons_dir
         self.setStyleSheet(f"""
             QDialog {{
                 background-color: {theme.BG_PRIMARY};
@@ -206,8 +209,9 @@ class SettingsDialog(QDialog):
         """)
         add_row.addWidget(input_field, 1)
 
-        add_btn = QPushButton("+")
+        add_btn = QPushButton()
         add_btn.setFixedSize(26, 26)
+        add_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-plus.svg")))
         add_btn.setToolTip(f"Añadir patrón a «{title}»")
         add_btn.setStyleSheet(f"""
             QPushButton {{
@@ -222,8 +226,9 @@ class SettingsDialog(QDialog):
         """)
         add_row.addWidget(add_btn)
 
-        remove_btn = QPushButton("−")
+        remove_btn = QPushButton()
         remove_btn.setFixedSize(26, 26)
+        remove_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-eraser.svg")))
         remove_btn.setToolTip(f"Eliminar patrón seleccionado de «{title}»")
         remove_btn.setStyleSheet(f"""
             QPushButton {{
@@ -398,9 +403,10 @@ class SettingsDialog(QDialog):
         """)
         api_row.addWidget(self._api_key_input, 1)
 
-        self._toggle_key_btn = QPushButton("👁")
+        self._toggle_key_btn = QPushButton()
         self._toggle_key_btn.setFixedSize(28, 28)
         self._toggle_key_btn.setToolTip("Mostrar/ocultar API Key")
+        self._toggle_key_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-eye.svg")))
         self._toggle_key_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: {theme.BG_TERTIARY};

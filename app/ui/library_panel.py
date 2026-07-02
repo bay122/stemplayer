@@ -111,23 +111,6 @@ class LibraryPanel(QWidget):
 		self.lib_path_label.setWordWrap(True)
 		path_row.addWidget(self.lib_path_label, 1)
 
-		self.settings_btn = QPushButton()
-		self.settings_btn.setFixedSize(24, 24)
-		self.settings_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-levels.svg")))
-		self.settings_btn.setToolTip("Configuración")
-		self.settings_btn.setStyleSheet(f"""
-			QPushButton {{
-				background-color: {theme.BG_TERTIARY};
-				color: {theme.TEXT_PRIMARY};
-				border: 1px solid {theme.BORDER};
-				border-radius: 3px;
-				font-size: 13px;
-			}}
-			QPushButton:hover {{ background-color: {theme.HOVER_BRIGHTEN}; }}
-		""")
-		self.settings_btn.clicked.connect(self._open_settings)
-		path_row.addWidget(self.settings_btn)
-
 		self.set_lib_btn = QPushButton()
 		self.set_lib_btn.setToolTip("Cambiar carpeta de librería")
 		self.set_lib_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-open.svg")))
@@ -144,6 +127,23 @@ class LibraryPanel(QWidget):
 		""")
 		self.set_lib_btn.clicked.connect(self._select_library_path)
 		path_row.addWidget(self.set_lib_btn)
+
+		self.settings_btn = QPushButton()
+		self.settings_btn.setFixedSize(24, 24)
+		self.settings_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-levels.svg")))
+		self.settings_btn.setToolTip("Configuración")
+		self.settings_btn.setStyleSheet(f"""
+			QPushButton {{
+				background-color: {theme.BG_TERTIARY};
+				color: {theme.TEXT_PRIMARY};
+				border: 1px solid {theme.BORDER};
+				border-radius: 3px;
+				font-size: 13px;
+			}}
+			QPushButton:hover {{ background-color: {theme.HOVER_BRIGHTEN}; }}
+		""")
+		self.settings_btn.clicked.connect(self._open_settings)
+		path_row.addWidget(self.settings_btn)
 
 		layout.addLayout(path_row)
 
@@ -306,7 +306,7 @@ class LibraryPanel(QWidget):
 	def _open_settings(self):
 		filters = self.config_mgr.get_stem_filters()
 		port = self.config_mgr.get_stream_port()
-		dialog = SettingsDialog(filters, port, config_mgr=self.config_mgr, parent=self)
+		dialog = SettingsDialog(filters, port, config_mgr=self.config_mgr, icons_dir=self.icons_dir, parent=self)
 		if dialog.exec() == SettingsDialog.Accepted:
 			self.config_mgr.set_stem_filters(dialog.get_stem_filters())
 			self.config_mgr.set_stream_port(dialog.get_stream_port())
@@ -706,10 +706,10 @@ class LibraryPanel(QWidget):
 			item = self.library_list.item(i)
 			song_name = item.data(Qt.UserRole)
 
-		if song_name == current_song:
-			if is_playing and blink:
-				item.setIcon(svg_icon(os.path.join(icons_dir, "fad-speaker.svg"), theme.SVG_ICON_PLAYING))
+			if song_name == current_song:
+				if is_playing and blink:
+					item.setIcon(svg_icon(os.path.join(icons_dir, "fad-speaker.svg"), theme.SVG_ICON_PLAYING))
+				else:
+					item.setIcon(svg_icon(os.path.join(icons_dir, "fad-speaker.svg"), theme.ACCENT_PRIMARY))
 			else:
-				item.setIcon(svg_icon(os.path.join(icons_dir, "fad-speaker.svg"), theme.ACCENT_PRIMARY))
-		else:
-			item.setIcon(svg_icon(os.path.join(icons_dir, "fad-speaker.svg"), theme.BORDER))
+				item.setIcon(svg_icon(os.path.join(icons_dir, "fad-speaker.svg"), theme.BORDER))

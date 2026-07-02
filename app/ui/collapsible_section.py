@@ -28,16 +28,16 @@ class CollapsibleSection(QWidget):
 		""")
 		self._header.setFixedHeight(26)
 		hl = QHBoxLayout(self._header)
-		hl.setContentsMargins(8, 0, 8, 0)
+		hl.setContentsMargins(8, 8, 8, 8)
 		hl.setSpacing(4)
 
 		self._arrow = QLabel("▼")
-		self._arrow.setStyleSheet(f"color: {theme.TEXT_MUTED}; font-size: 10px;")
+		self._arrow.setStyleSheet(f"color: {theme.TEXT_MUTED}; font-size: 10px; border: 0 !important;")
 		hl.addWidget(self._arrow)
 
 		self._title = QLabel(title)
 		self._title.setStyleSheet(f"""
-			color: {theme.TEXT_PRIMARY}; font-size: 11px; font-weight: bold;
+			color: {theme.TEXT_PRIMARY}; font-size: 11px; font-weight: bold; border: 0 !important;
 		""")
 		hl.addWidget(self._title, 1)
 

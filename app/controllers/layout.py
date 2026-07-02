@@ -7,10 +7,10 @@ from app.ui.theme import current as theme
 class LayoutMixin:
     def _toggle_live_mode(self, checked):
         if checked:
-            self.center_stack.setCurrentIndex(1)
+            self.center_stack.setCurrentWidget(self.live_display_widget)
             self.toggle_live_btn.setText("Mezclador")
         else:
-            self.center_stack.setCurrentIndex(0)
+            self.center_stack.setCurrentWidget(self.stems_scroll)
             self.toggle_live_btn.setText("Live Chords")
             self.live_display_widget.reset()
 
@@ -93,7 +93,7 @@ class LayoutMixin:
         self.live_display_widget.reset()
         self.toggle_live_btn.setEnabled(False)
         self.toggle_live_btn.setChecked(False)
-        self.center_stack.setCurrentIndex(0)
+        self.center_stack.setCurrentWidget(self.stems_scroll)
         self.status_label.setText("Listo")
         self._update_save_buttons()
         self._update_undo_redo_btns()
