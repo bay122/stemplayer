@@ -3,6 +3,9 @@ from app.ui.chordpro_editor.constants import (
     format_chord,
     detect_key_preference,
     transpose_chord_name,
+    chord_in_scale,
+    chord_root_pc,
+    scale_chords,
 )
 
 
@@ -95,3 +98,56 @@ def test_transpose_roundtrip():
 def test_transpose_preserves_type():
     assert transpose_chord_name("Cmaj7", 2) == "Dmaj7"
     assert transpose_chord_name("F#sus4", 1) == "Gsus4"
+
+
+def test_scale_chords_c_major():
+    result = scale_chords("C")
+    assert result == ["C", "Dm", "Em", "F", "G", "Am", "B°"]
+
+
+def test_scale_chords_g_major_uses_sharps():
+    result = scale_chords("G")
+    assert result == ["G", "Am", "Bm", "C", "D", "Em", "F#°"]
+
+
+def test_scale_chords_f_major_uses_flats():
+    result = scale_chords("F")
+    assert result == ["F", "Gm", "Am", "Bb", "C", "Dm", "E°"]
+
+
+def test_scale_chords_a_minor():
+    result = scale_chords("A", mode="minor")
+    assert result == ["Am", "Bm", "C", "Dm", "Em", "F", "G"]
+
+
+def test_scale_chords_e_minor():
+    result = scale_chords("E", mode="minor")
+    assert result == ["Em", "F#m", "G", "Am", "Bm", "C", "D"]
+
+
+def test_scale_chords_invalid_key_returns_empty():
+    assert scale_chords("Hx") == []
+
+
+def test_chord_root_pc_simple():
+    assert chord_root_pc("C") == 0
+    assert chord_root_pc("Am") == 9
+    assert chord_root_pc("F#") == 6
+    assert chord_root_pc("Bb") == 10
+
+
+def test_chord_root_pc_invalid():
+    assert chord_root_pc("Hx") == -1
+    assert chord_root_pc("") == -1
+
+
+def test_chord_in_scale_major():
+    assert chord_in_scale("C", "C") is True
+    assert chord_in_scale("Am", "C") is True
+    assert chord_in_scale("F#", "C") is False  # F# is not in C major
+
+
+def test_chord_in_scale_minor():
+    assert chord_in_scale("Am", "A", mode="minor") is True
+    assert chord_in_scale("G", "A", mode="minor") is True
+    assert chord_in_scale("B", "A", mode="minor") is False

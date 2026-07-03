@@ -130,3 +130,60 @@ def transpose_chord_name(name: str, semitones: int, use_flats: bool | None = Non
     new_root = (root + semitones) % 12
     new_bass = ((bass + semitones) % 12) if bass is not None else None
     return format_chord(new_root, ctype, new_bass, use_flats)
+
+
+_SCALE_QUALITIES_MAJOR = ["", "m", "m", "", "", "m", "dim"]
+_SCALE_QUALITIES_MINOR = ["m", "m", "", "m", "m", "", ""]
+
+
+def _key_to_pc(key: str) -> int:
+    if not key:
+        return -1
+    root, _ = _parse_root(key)
+    if not key[0].upper() in "ABCDEFG":
+        return -1
+    return root
+
+
+def chord_root_pc(name: str) -> int:
+    if not name:
+        return -1
+    root, _, _ = parse_chord_name(name)
+    if name.strip() and not name[0].upper() in "ABCDEFG":
+        return -1
+    return root if name else -1
+
+
+def scale_chords(key: str, mode: str = "major", use_flats: bool | None = None) -> list:
+    pc = _key_to_pc(key)
+    if pc < 0:
+        return []
+    if mode not in SCALE_INTERVALS:
+        return []
+    intervals = SCALE_INTERVALS[mode]
+    qualities = _SCALE_QUALITIES_MAJOR if mode == "major" else _SCALE_QUALITIES_MINOR
+    if use_flats is None:
+        use_flats = detect_key_preference(pc)
+    names = NOTE_NAMES_FLAT if use_flats else NOTE_NAMES_SHARP
+    out = []
+    for interval, quality in zip(intervals, qualities):
+        root = names[(pc + interval) % 12]
+        symbol = "°" if quality == "dim" else ""
+        if quality == "m":
+            symbol = "m"
+        out.append(f"{root}{symbol}")
+    return out
+
+
+def chord_in_scale(name: str, key: str, mode: str = "major") -> bool:
+    name_root, name_type, name_bass = parse_chord_name(name)
+    if not name.strip() or not name[0].upper() in "ABCDEFG":
+        return False
+    diatonic = scale_chords(key, mode=mode)
+    if not diatonic:
+        return False
+    for d in diatonic:
+        d_root, d_type, d_bass = parse_chord_name(d)
+        if d_root == name_root and d_type == name_type and d_bass == name_bass:
+            return True
+    return False
