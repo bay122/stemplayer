@@ -2,7 +2,7 @@ import os
 import json
 from PySide6.QtCore import QSettings, QThread, Signal
 from PySide6.QtWidgets import QInputDialog, QLineEdit, QMessageBox, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QDialogButtonBox
-from app.ui.chordpro_editor import ChordProEditor
+from app.ui.chordpro_editor import ChordProEditorWindow
 from app.ui.sync_editor import SyncEditor
 from app.services import create_sync_file
 from app.services.chord_analysis import ChordAnalysisThread
@@ -505,24 +505,19 @@ class ChordProGenerationMixin(DeckStatusMixin):
             return
         song_folder = os.path.join(self.lib_mgr.library_path, self.state.current_song_name)
         chopro_path = os.path.join(song_folder, f"{self.state.current_song_name}.chopro")
-
+        sync_path = os.path.join(song_folder, f"{self.state.current_song_name}.sync.json")
         if not os.path.exists(chopro_path):
             QMessageBox.warning(self, "Error", "No se encontro el archivo ChordPro.")
             return
-
-        self.chordpro_window = ChordProEditor(chopro_path)
-        self.chordpro_window.setWindowTitle(f"ChordPro Editor - {self.state.current_song_name}")
-        self.chordpro_window.resize(900, 700)
-        screen = self.screen().geometry() if hasattr(self, 'screen') else None
-        if screen:
-            self.chordpro_window.move(
-                (screen.width() - 900) // 2,
-                (screen.height() - 700) // 2
-            )
-
-        def _on_chordpro_saved():
-            self._load_chordpro_preview()
-            self.status_label.setText("ChordPro guardado.")
-
-        self.chordpro_window.saved.connect(_on_chordpro_saved)
+        self.chordpro_window = ChordProEditorWindow(
+            chopro_path=chopro_path,
+            sync_path=sync_path if os.path.exists(sync_path) else None,
+            main_window=self,
+            parent=self,
+        )
+        self.chordpro_window.saved.connect(self._on_chordpro_saved)
         self.chordpro_window.show()
+
+    def _on_chordpro_saved(self):
+        self._load_chordpro_preview()
+        self.status_label.setText("ChordPro guardado.")
