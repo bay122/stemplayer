@@ -66,7 +66,7 @@ stemplayer/
 │   │   ├── stem_item_widget.py      # Widget individual de cada stem
 │   │   ├── chordpro_preview.py      # ChordProPreviewWidget
 │   │   ├── live_display.py          # LiveChordWidget (karaoke)
-│   │   ├── chordpro_editor.py       # ChordProEditor
+│   │   ├── chordpro_editor/          # ChordPro editor v2 (model + UI)
 │   │   ├── meters_panel.py          # MeterBar + SystemMetersPanel
 │   │   ├── library_panel.py         # LibraryPanel
 │   │   ├── setlist_panel.py         # SetlistPanel
