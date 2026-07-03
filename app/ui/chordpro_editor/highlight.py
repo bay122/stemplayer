@@ -27,7 +27,8 @@ class ChordProHighlighter(QSyntaxHighlighter):
         self._chord_off_fmt = QTextCharFormat()
         self._chord_off_fmt.setForeground(QColor(theme.TEXT_PRIMARY))
         self._chord_off_fmt.setBackground(QColor(theme.ACCENT_WARNING))
-        self._chord_off_fmt.setFontBold(True)
+        from PySide6.QtGui import QFont as _QF
+        self._chord_off_fmt.setFontWeight(_QF.Bold)
 
     def highlightBlock(self, text):
         for m in _DIRECTIVE_RE.finditer(text):
