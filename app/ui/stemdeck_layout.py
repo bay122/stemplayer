@@ -473,7 +473,7 @@ class StemDeckLayout(QWidget):
         center_zone.setAlignment(Qt.AlignCenter)
         self._add_transport_zone(center_zone)
         self._add_time_zone(center_zone)
-        controls_row.addLayout(center_zone, 1, Qt.AlignCenter)
+        controls_row.addLayout(center_zone, 1)
 
         # --- ZONE RIGHT: history buttons + heart + metronome ---
         right_zone = QVBoxLayout()
