@@ -68,15 +68,21 @@ class ChordProEditorView(QWidget):
         self._key_edit.editingFinished.connect(self._on_key_edited)
         save_btn = QPushButton("Guardar")
         save_btn.clicked.connect(self.save_requested)
+
         for label, widget in (("Título", self._title_edit),
                               ("Artista", self._artist_edit),
                               ("Tono", self._key_edit)):
             act = QWidget()
             row = QHBoxLayout(act)
             row.setContentsMargins(0, 0, 0, 0)
+            row.setSpacing(4)
             row.addWidget(QLabel(f"{label}:"))
             row.addWidget(widget)
             header.addWidget(act)
+        # Spacer pushes separator + save to the right
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        header.addWidget(spacer)
         header.addSeparator()
         header.addWidget(save_btn)
         outer.addWidget(header)

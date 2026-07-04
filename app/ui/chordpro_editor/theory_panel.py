@@ -14,6 +14,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.ui.chordpro_editor.flow_layout import FlowLayout
+
 from app.ui.chordpro_editor.constants import (
     CHORD_TYPES,
     NOTE_NAMES_FLAT,
@@ -58,27 +60,24 @@ class _ChordGroup(QGroupBox):
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(6, 6, 6, 6)
         self._layout.setSpacing(4)
+        self._flow = FlowLayout(h_spacing=4, v_spacing=4)
+        self._layout.addLayout(self._flow)
 
     def set_chords(self, chords: list, on_click):
         # Clear existing buttons
-        while self._layout.count():
-            item = self._layout.takeAt(0)
+        while self._flow.count():
+            item = self._flow.takeAt(0)
             w = item.widget()
             if w:
                 w.deleteLater()
-        # Build a grid of buttons (4 columns)
-        grid = QHBoxLayout()
-        grid.setSpacing(4)
-        for i, ch in enumerate(chords):
+        for ch in chords:
             btn = QPushButton(ch)
             btn.setToolTip(f"Insertar {ch}")
-            btn.setFixedHeight(26)
-            btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            btn.setFixedHeight(28)
+            btn.setMinimumWidth(48)
+            btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
             btn.clicked.connect(lambda c=False, ch=ch: on_click(ch))
-            grid.addWidget(btn)
-        container = QWidget()
-        container.setLayout(grid)
-        self._layout.addWidget(container)
+            self._flow.addWidget(btn)
 
 
 class MusicTheoryPanel(QWidget):

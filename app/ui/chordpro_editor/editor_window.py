@@ -120,7 +120,7 @@ class ChordProEditorWindow(QMainWindow):
         self.saved.emit()
 
     def export_pdf(self):
-        from app.ui.chordpro_editor.preview import _render_chordpro_html
+        from app.ui.chordpro_editor.render import render_section_html
         if self._view.document() is None:
             return
         default_path = self._chopro_path.replace(".chopro", ".pdf")
@@ -130,28 +130,21 @@ class ChordProEditorWindow(QMainWindow):
 
         body_chunks = []
         for sec in self._view.document().sections:
-            body_chunks.append(
-                f"<h3 style='margin-top: 20px; color: #333;'>{sec.name}</h3>"
-            )
-            sec_text = "\n".join(sec.lines)
-            sec_html = _render_chordpro_html(sec_text)
+            sec_html = render_section_html(sec.name, sec.lines, font_size=22)
             sec_html = sec_html.replace(
                 f"color: {theme.ACCENT_SUCCESS}", "color: #000000; font-weight: bold;"
-            )
-            sec_html = sec_html.replace(
-                f"color: {theme.TEXT_SECONDARY}", "color: #000000"
             )
             body_chunks.append(sec_html)
 
         meta = self._view.document().metadata
         html = [
-            "<html><head><meta charset='utf-8'></head><body style='font-family: monospace; font-size: 14px;'>",
-            f"<h1 style='text-align: center; margin-bottom: 0;'>{meta.title or 'Sin Título'}</h1>",
+            "<html><head><meta charset='utf-8'></head><body style='font-family: sans-serif;'>",
+            f"<h1 style='text-align: center; margin-bottom: 0; font-size: 28px;'>{meta.title or 'Sin Título'}</h1>",
         ]
         if meta.artist:
-            html.append(f"<h2 style='text-align: center; margin-top: 5px; color: #555;'>{meta.artist}</h2>")
+            html.append(f"<h2 style='text-align: center; margin-top: 6px; color: #555; font-size: 18px;'>{meta.artist}</h2>")
         if meta.key:
-            html.append(f"<p style='text-align: center;'>Tonalidad: <strong>{meta.key}</strong></p><hr>")
+            html.append(f"<p style='text-align: center; font-size: 16px;'>Tonalidad: <strong>{meta.key}</strong></p><hr>")
         html.extend(body_chunks)
         html.append("</body></html>")
 
