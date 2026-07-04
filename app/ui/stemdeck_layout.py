@@ -4,9 +4,9 @@ Estructura vertical:
 - Header (logo + título canción + botones Layout/Close)
 - ExtractPanel (chips dinámicos como filtro por categoría)
 - InfoCardsPanel (cards KEY/BPM/Duration/Canción + medidores apilados)
-- StemsTimelineWidget (unified ruler + per-track rows with shared playhead)
+- Stems scroll (DeckStemRow con waveform, VolumeSlider, PanSlider, move_up/down)
 - ActionsRow (Save/Gen Sheet/Live Chords/⋮)
-- PlayerSection (3-zone: master+count-in | transport+time | history+heart+metronome)
+- PlayerSection (master/metronome/count-in/undo/redo/reset/transport + waveform global)
 - StatusRow (status_label + progress_bar)
 - LiveChordWidget (oculto, se muestra con Live Chords toggle)
 - ChordProPreviewWidget (sección colapsable, aparece si hay .chopro)
@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea,
     QSizePolicy, QPushButton, QMenu, QWidgetAction, QSpinBox, QGridLayout,
     QLineEdit, QButtonGroup, QDialog, QFormLayout, QDialogButtonBox,
-    QProgressBar, QCheckBox, QComboBox, QSlider
+    QProgressBar, QCheckBox, QComboBox
 )
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QAction
@@ -25,13 +25,12 @@ from app.ui.svg_icon import svg_icon
 from app.ui.theme import current as theme
 from app.ui.info_cards import InfoCardsPanel
 from app.ui.deck_stem_row import DeckStemRow
-from app.ui.deck_track_row import DeckTrackRow
-from app.ui.stems_timeline import StemsTimelineWidget
-from app.ui.compact_slider import CompactSlider
 from app.ui.extract_panel import ExtractPanel
 from app.ui.collapsible_section import CollapsibleSection
 from app.ui.global_waveform import GlobalWaveformView
 from app.ui.chordpro_preview import ChordProPreviewWidget
+from app.ui.deck_volume_slider import DeckVolumeSlider
+from app.ui.deck_pan_slider import DeckPanSlider
 from app.utils.constants import get_key_at_semitone_shift
 from app.utils.stem_classifier import categories_present
 
@@ -230,20 +229,16 @@ class StemDeckLayout(QWidget):
         )
         root.addWidget(stems_header)
 
-        # Unified stems timeline: shared ruler on top + per-track rows +
-        # single red playhead crossing all rows.
         self.stems_scroll = QScrollArea()
         self.stems_scroll.setWidgetResizable(True)
         self.stems_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.stems_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.stems_scroll.setFrameShape(QFrame.NoFrame)
-        self._stems_timeline = StemsTimelineWidget()
-        self._stems_timeline.setStyleSheet("background: transparent;")
-        self.stems_scroll.setWidget(self._stems_timeline)
-        # Backwards-compatible aliases for external code.
-        self.stems_container = self._stems_timeline
-        self.stems_layout = self._stems_timeline._tracks_layout
-        self._deck_rows = self._stems_timeline._rows
+        self.stems_container = QWidget()
+        self.stems_layout = QVBoxLayout(self.stems_container)
+        self.stems_layout.setAlignment(Qt.AlignTop)
+        self.stems_layout.setSpacing(4)
+        self.stems_layout.setContentsMargins(8, 2, 8, 2)
+        self.stems_scroll.setWidget(self.stems_container)
         root.addWidget(self.stems_scroll, 1)
 
         self.actions_row = self._build_actions_row()
@@ -447,41 +442,318 @@ class StemDeckLayout(QWidget):
         return row
 
     def _build_player_section(self):
-        """Reproductor del deck: 3 zonas (master/count-in | transport+time | history+heart+metro)."""
+        """El reproductor del deck: layout de 3 columnas + fila de waveform.
+
+        Layout inspired by OTROS/ejemplo_distribucion_reproductor.html:
+
+        - ZONE-LEFT: master volume (DeckVolumeSlider) + count-in combo.
+        - ZONE-CENTER: transport buttons + time labels stacked.
+        - ZONE-RIGHT: undo/redo/reset, heart (favorite), metronome checkbox,
+          and (when enabled) metro volume + pan sliders.
+        - WAVEFORM-ROW: current time, global waveform, total time.
+        """
         main = self.main
         section = QFrame()
         section.setObjectName("playerSection")
 
         outer = QVBoxLayout(section)
-        outer.setContentsMargins(10, 8, 10, 8)
-        outer.setSpacing(6)
+        outer.setContentsMargins(10, 6, 10, 6)
+        outer.setSpacing(8)
 
+        # ---- Row 1: 3-column controls ----
         controls_row = QHBoxLayout()
-        controls_row.setSpacing(16)
+        controls_row.setSpacing(20)
         outer.addLayout(controls_row)
 
-        # --- ZONE LEFT: master volume + count-in selector ---
-        left_zone = QVBoxLayout()
-        left_zone.setSpacing(8)
-        self._add_master_zone(left_zone, section)
-        self._add_count_in_zone(left_zone)
-        controls_row.addLayout(left_zone, 0)
+        # ---- ZONE-LEFT: master + metrónomo ----
+        left_col = QVBoxLayout()
+        left_col.setSpacing(10)
+        left_col.setContentsMargins(20, 15, 20, 15)
 
-        # --- ZONE CENTER: transport buttons + time display ---
-        center_zone = QVBoxLayout()
-        center_zone.setSpacing(4)
-        center_zone.setAlignment(Qt.AlignCenter)
-        self._add_transport_zone(center_zone)
-        self._add_time_zone(center_zone)
-        controls_row.addLayout(center_zone, 1)
+        master_row = QHBoxLayout()
+        master_row.setSpacing(6)
+        master_row.setContentsMargins(0, 0, 0, 0)
+        master_lbl = QLabel("Master")
+        master_lbl.setStyleSheet(
+            f"color: {theme.TEXT_SECONDARY}; font-size: 11px; "
+            f"background: transparent; min-width: 48px;"
+        )
+        master_row.addWidget(master_lbl)
+        self.deck_master_slider = DeckVolumeSlider(
+            parent=section, icons_dir=self.icons_dir
+        )
+        self.deck_master_slider.setValue(self.main.state.master_volume)
+        self.deck_master_slider.valueChanged.connect(self.main._on_master_volume_changed)
+        self.deck_master_slider.sliderReleased.connect(self.main._on_master_volume_released)
+        master_row.addWidget(self.deck_master_slider, 1)
+        left_col.addLayout(master_row)
 
-        # --- ZONE RIGHT: history buttons + heart + metronome ---
-        right_zone = QVBoxLayout()
-        right_zone.setSpacing(8)
-        right_zone.setAlignment(Qt.AlignTop | Qt.AlignRight)
-        self._add_history_zone(right_zone)
-        self._add_metronome_zone(right_zone, section)
-        controls_row.addLayout(right_zone, 0)
+		
+
+		# Row: metronome checkbox
+        metro_check_row = QHBoxLayout()
+        metro_check_row.setSpacing(6)
+        metro_check_row.setAlignment(Qt.AlignRight)
+        self.deck_click_check = QCheckBox("Metrónomo")
+        self.deck_click_check.setToolTip(
+            "Metrónomo persistente durante la canción"
+        )
+        self.deck_click_check.setChecked(self.main.state.click_during_playback)
+        self.deck_click_check.stateChanged.connect(self._on_metronome_toggled)
+        metro_check_row.addWidget(self.deck_click_check)
+        left_col.addLayout(metro_check_row)
+
+        # Row: metro volume + pan (shown only when metronome enabled)
+        metro_sliders_row = QHBoxLayout()
+        metro_sliders_row.setSpacing(8)
+        metro_sliders_row.setAlignment(Qt.AlignRight)
+
+        metro_vol_lbl = QLabel("Vol")
+        metro_vol_lbl.setStyleSheet(
+            f"color: {theme.TEXT_SECONDARY}; font-size: 11px; "
+            f"background: transparent;"
+        )
+        metro_sliders_row.addWidget(metro_vol_lbl)
+        self.deck_metro_vol_slider = DeckVolumeSlider(
+            parent=section, icons_dir=self.icons_dir
+        )
+        self.deck_metro_vol_slider.setValue(self.main.state.metronome_volume)
+        self.deck_metro_vol_slider.valueChanged.connect(
+            self.main._on_metronome_volume_changed
+        )
+        self.deck_metro_vol_slider.sliderReleased.connect(
+            self.main._on_metronome_volume_released
+        )
+        self.deck_metro_vol_slider.setVisible(self.main.state.click_during_playback)
+        self.deck_metro_vol_slider.setFixedWidth(120)
+        metro_sliders_row.addWidget(self.deck_metro_vol_slider)
+
+        metro_pan_lbl = QLabel("Pan")
+        metro_pan_lbl.setStyleSheet(
+            f"color: {theme.TEXT_SECONDARY}; font-size: 11px; "
+            f"background: transparent;"
+        )
+        metro_sliders_row.addWidget(metro_pan_lbl)
+        self.deck_metro_pan_slider = DeckPanSlider(
+            parent=section, icons_dir=self.icons_dir
+        )
+        self.deck_metro_pan_slider.setValue(self.main.state.metronome_pan)
+        self.deck_metro_pan_slider.valueChanged.connect(
+            self.main._on_metronome_pan_changed
+        )
+        self.deck_metro_pan_slider.sliderReleased.connect(
+            self.main._on_metronome_pan_released
+        )
+        self.deck_metro_pan_slider.setVisible(self.main.state.click_during_playback)
+        self.deck_metro_pan_slider.setFixedWidth(120)
+        metro_sliders_row.addWidget(self.deck_metro_pan_slider)
+
+        left_col.addLayout(metro_sliders_row)
+
+        left_container = QWidget()
+        left_container.setLayout(left_col)
+        left_container.setFixedWidth(400)
+        controls_row.addWidget(left_container, 0)
+
+        # ---- ZONE-CENTER: transport + time ----
+        center_col = QVBoxLayout()
+        center_col.setSpacing(4)
+        center_col.setAlignment(Qt.AlignCenter)
+
+        trans_row = QHBoxLayout()
+        trans_row.setSpacing(6)
+        trans_row.setAlignment(Qt.AlignCenter)
+
+        self.deck_prev_btn = QPushButton()
+        self.deck_prev_btn.setIcon(
+            svg_icon(os.path.join(self.icons_dir, "fad-prev.svg"))
+        )
+        self.deck_prev_btn.setFixedSize(34, 34)
+        self.deck_prev_btn.setToolTip("Canción anterior")
+        self.deck_prev_btn.clicked.connect(self.main.setlist_widget.play_previous)
+        trans_row.addWidget(self.deck_prev_btn)
+
+        self.deck_play_btn = QPushButton()
+        self.deck_play_btn.setIcon(
+            svg_icon(os.path.join(self.icons_dir, "fad-play.svg"))
+        )
+        self.deck_play_btn.setFixedSize(42, 42)
+        self.deck_play_btn.setToolTip("Play / Pause")
+        self.deck_play_btn.clicked.connect(self.main._toggle_play)
+        trans_row.addWidget(self.deck_play_btn)
+
+        self.deck_stop_btn = QPushButton()
+        self.deck_stop_btn.setIcon(
+            svg_icon(os.path.join(self.icons_dir, "fad-stop.svg"))
+        )
+        self.deck_stop_btn.setFixedSize(34, 34)
+        self.deck_stop_btn.setToolTip("Stop")
+        self.deck_stop_btn.clicked.connect(self.main._stop_playback)
+        trans_row.addWidget(self.deck_stop_btn)
+
+        self.deck_next_btn = QPushButton()
+        self.deck_next_btn.setIcon(
+            svg_icon(os.path.join(self.icons_dir, "fad-next.svg"))
+        )
+        self.deck_next_btn.setFixedSize(34, 34)
+        self.deck_next_btn.setToolTip("Canción siguiente")
+        self.deck_next_btn.clicked.connect(self.main.setlist_widget.play_next)
+        trans_row.addWidget(self.deck_next_btn)
+
+        self.deck_auto_play_btn = QPushButton()
+        self.deck_auto_play_btn.setIcon(
+            svg_icon(
+                os.path.join(self.icons_dir, "fad-preset-ab.svg"),
+                theme.SVG_ICON_ACTIVE,
+            )
+        )
+        self.deck_auto_play_btn.setFixedSize(34, 34)
+        self.deck_auto_play_btn.setCheckable(True)
+        self.deck_auto_play_btn.setToolTip(
+            "Auto-avanzar y reproducir en setlist"
+        )
+        self.deck_auto_play_btn.toggled.connect(self.main._on_auto_play_toggled)
+        trans_row.addWidget(self.deck_auto_play_btn)
+
+        center_col.addLayout(trans_row)
+
+        time_row = QHBoxLayout()
+        time_row.setSpacing(8)
+        time_row.setAlignment(Qt.AlignCenter)
+        self.deck_current_time = QLabel("00:00")
+        self.deck_current_time.setStyleSheet(
+            f"color: {theme.TEXT_PRIMARY}; font-size: 13px; "
+            f"font-family: {theme.FONT_MONO}; background: transparent;"
+        )
+        self.deck_current_time.setFixedWidth(50)
+        self.deck_current_time.setAlignment(Qt.AlignCenter)
+        time_row.addWidget(self.deck_current_time)
+        sep = QLabel("/")
+        sep.setStyleSheet(
+            f"color: {theme.TEXT_MUTED}; font-size: 11px; "
+            f"background: transparent;"
+        )
+        time_row.addWidget(sep)
+        self.deck_total_time = QLabel("00:00")
+        self.deck_total_time.setStyleSheet(
+            f"color: {theme.TEXT_SECONDARY}; font-size: 13px; "
+            f"font-family: {theme.FONT_MONO}; background: transparent;"
+        )
+        self.deck_total_time.setFixedWidth(50)
+        self.deck_total_time.setAlignment(Qt.AlignCenter)
+        time_row.addWidget(self.deck_total_time)
+        center_col.addLayout(time_row)
+
+        center_container = QWidget()
+        center_container.setLayout(center_col)
+        controls_row.addWidget(center_container, 1)
+
+        # ---- ZONE-RIGHT: undo/redo/reset + heart + metronome ----
+        right_col = QVBoxLayout()
+        right_col.setSpacing(8)
+        right_col.setContentsMargins(20, 15, 20, 25)
+        right_col.setAlignment(Qt.AlignCenter)
+
+        # Row: undo, redo, reset, heart
+        actions_row = QHBoxLayout()
+        actions_row.setSpacing(6)
+        actions_row.setAlignment(Qt.AlignRight)
+
+        self.deck_undo_btn = QPushButton()
+        self.deck_undo_btn.setIcon(
+            svg_icon(os.path.join(self.icons_dir, "fad-undo.svg"))
+        )
+        self.deck_undo_btn.setFixedSize(32, 32)
+        self.deck_undo_btn.setToolTip("Deshacer")
+        self.deck_undo_btn.clicked.connect(self.main._undo)
+        self.deck_undo_btn.setEnabled(self.main.state.history_idx > 0)
+        actions_row.addWidget(self.deck_undo_btn)
+
+        self.deck_redo_btn = QPushButton()
+        self.deck_redo_btn.setIcon(
+            svg_icon(os.path.join(self.icons_dir, "fad-redo.svg"))
+        )
+        self.deck_redo_btn.setFixedSize(32, 32)
+        self.deck_redo_btn.setToolTip("Rehacer")
+        self.deck_redo_btn.clicked.connect(self.main._redo)
+        self.deck_redo_btn.setEnabled(
+            self.main.state.history_idx < len(self.main.state.history) - 1
+        )
+        actions_row.addWidget(self.deck_redo_btn)
+
+        self.deck_reset_btn = QPushButton()
+        self.deck_reset_btn.setIcon(
+            svg_icon(os.path.join(self.icons_dir, "fad-history.svg"))
+        )
+        self.deck_reset_btn.setFixedSize(32, 32)
+        self.deck_reset_btn.setToolTip(
+            "Restablecer todos los cambios de pitch y volumen"
+        )
+        self.deck_reset_btn.clicked.connect(self.main._reset_all)
+        actions_row.addWidget(self.deck_reset_btn)
+
+        self.deck_heart_btn = QPushButton()
+        self.deck_heart_btn.setIcon(
+            svg_icon(os.path.join(self.icons_dir, "fad-heart-1.svg"))
+        )
+        self.deck_heart_btn.setFixedSize(30, 30)
+        self.deck_heart_btn.setCheckable(True)
+        self.deck_heart_btn.setToolTip("Marcar como favorita")
+        self.deck_heart_btn.clicked.connect(self._on_favorite_toggled)
+        self._refresh_favorite_state()
+        actions_row.addWidget(self.deck_heart_btn)
+
+        right_col.addLayout(actions_row)
+
+        cin_row = QHBoxLayout()
+        cin_row.setSpacing(6)
+        cin_lbl = QLabel("Count-in")
+        cin_lbl.setStyleSheet(
+            f"color: {theme.TEXT_SECONDARY}; font-size: 11px; "
+            f"background: transparent; min-width: 48px;"
+        )
+        cin_row.addWidget(cin_lbl)
+        self.deck_count_in_combo = QComboBox()
+        self.deck_count_in_combo.addItems(
+            ["Sin count-in", "1 compás", "2 compases"]
+        )
+        self.deck_count_in_combo.setCurrentIndex(self.main.state.count_in_bars)
+        self.deck_count_in_combo.currentIndexChanged.connect(
+            self.main._on_count_in_changed
+        )
+        self.deck_count_in_combo.setMinimumHeight(26)
+        cin_row.addWidget(self.deck_count_in_combo, 1)
+        right_col.addLayout(cin_row)
+
+        right_container = QWidget()
+        right_container.setLayout(right_col)
+        right_container.setFixedWidth(300)
+        controls_row.addWidget(right_container, 0)
+
+        # ---- Row 2: waveform + time labels ----
+        from PySide6.QtWidgets import QSlider
+        waveform_row = QHBoxLayout()
+        waveform_row.setSpacing(6)
+        waveform_row.setContentsMargins(0, 0, 0, 0)
+
+        # Hidden slider kept for signal routing (the visual is the waveform)
+        self.deck_progress = QSlider(Qt.Horizontal)
+        self.deck_progress.setRange(0, 1000)
+        self.deck_progress.setValue(0)
+        self.deck_progress.setStyleSheet(theme.playback_slider_qss())
+        self.deck_progress.setTracking(True)
+        self.deck_progress.sliderReleased.connect(self.main._on_playback_seek)
+        self.deck_progress.sliderMoved.connect(self.main._on_playback_preview)
+        self.deck_progress.setMaximumWidth(0)
+        self.deck_progress.setVisible(False)
+
+        self._global_waveform = GlobalWaveformView(section)
+        self._global_waveform.setMinimumHeight(48)
+        self._global_waveform.setMaximumHeight(64)
+        self._global_waveform.seek_requested.connect(self.main._on_waveform_seek)
+
+        waveform_row.addWidget(self._global_waveform, 1)
+        outer.addLayout(waveform_row)
 
         section.setStyleSheet(f"""
             QFrame#playerSection {{
@@ -501,294 +773,75 @@ class StemDeckLayout(QWidget):
                 background-color: {theme.ACCENT_PRIMARY};
                 border: 1px solid {theme.ACCENT_PRIMARY};
             }}
-            QPushButton#deckHeartBtn[active="true"] {{
-                color: {theme.ACCENT_DANGER};
-                border-color: {theme.ACCENT_DANGER};
-            }}
-            QCheckBox {{
-                color: {theme.TEXT_PRIMARY};
-                font-size: 11px;
-                background: transparent;
-                spacing: 6px;
-            }}
-            QCheckBox::indicator {{
-                width: 14px; height: 14px;
-                border: 1px solid {theme.BORDER};
-                border-radius: 3px;
-                background: {theme.BG_INPUT};
-            }}
-            QCheckBox::indicator:checked {{
-                background: {theme.ACCENT_PRIMARY};
-                border: 1px solid {theme.ACCENT_PRIMARY};
-            }}
-            QComboBox {{
-                background-color: {theme.BG_INPUT};
-                color: {theme.TEXT_PRIMARY};
-                border: 1px solid {theme.BORDER};
-                border-radius: {theme.BORDER_RADIUS_SM};
-                padding: 4px 8px;
-                font-size: 11px;
-            }}
-            QComboBox::drop-down {{
-                border: none;
-            }}
-            QComboBox QAbstractItemView {{
-                background: {theme.BG_INPUT};
-                color: {theme.TEXT_PRIMARY};
-                selection-background-color: {theme.ACCENT_PRIMARY};
-            }}
         """)
         return section
 
-    def _add_master_zone(self, parent_layout, parent_widget):
-        """Master volume slider (compact, dB markers, magnet behavior preserved)."""
-        from app.ui.volume_slider import VolumeSlider
-        # Keep VolumeSlider for the master because external code references
-        # deck_master_slider and expects VolumeSlider's full behavior.
-        self.deck_master_slider = VolumeSlider(parent=parent_widget, icons_dir=self.icons_dir)
-        self.deck_master_slider.setValue(self.main.state.master_volume)
-        self.deck_master_slider.valueChanged.connect(self.main._on_master_volume_changed)
-        self.deck_master_slider.sliderReleased.connect(self.main._on_master_volume_released)
-        self.deck_master_slider.setMinimumHeight(28)
-        self.deck_master_slider.setMaximumHeight(34)
-        # Wrap in a labeled HBox for the new compact layout
-        row = QHBoxLayout()
-        row.setSpacing(6)
-        lbl = QLabel("Master")
-        lbl.setStyleSheet(
-            f"color: {theme.TEXT_PRIMARY}; font-size: 11px; font-weight: bold; "
-            f"background: transparent; min-width: 48px;"
-        )
-        row.addWidget(lbl)
-        row.addWidget(self.deck_master_slider, 1)
-        parent_layout.addLayout(row)
+    def _on_metronome_toggled(self, state):
+        """Update internal state, show/hide metro sliders, and forward to main."""
+        checked = bool(state)
+        self.main.state.click_during_playback = checked
+        self.deck_metro_vol_slider.setVisible(checked)
+        self.deck_metro_pan_slider.setVisible(checked)
+        # Forward to the main handler (which pushes to undo/redo, updates classic view)
+        self.main._on_click_during_changed(state)
 
-    def _add_count_in_zone(self, parent_layout):
-        """Count-in bar selector under the master volume."""
-        row = QHBoxLayout()
-        row.setSpacing(6)
-        lbl = QLabel("Count-in")
-        lbl.setStyleSheet(
-            f"color: {theme.TEXT_PRIMARY}; font-size: 11px; font-weight: bold; "
-            f"background: transparent; min-width: 48px;"
-        )
-        row.addWidget(lbl)
-        self.deck_count_in_combo = QComboBox()
-        self.deck_count_in_combo.addItems(["Sin count-in", "1 compás", "2 compases"])
-        self.deck_count_in_combo.setCurrentIndex(self.main.state.count_in_bars)
-        self.deck_count_in_combo.currentIndexChanged.connect(self.main._on_count_in_changed)
-        self.deck_count_in_combo.setMinimumHeight(26)
-        row.addWidget(self.deck_count_in_combo, 1)
-        parent_layout.addLayout(row)
-
-    def _add_transport_zone(self, parent_layout):
-        """Prev / Play / Stop / Next / Auto buttons in a single row."""
-        trans_row = QHBoxLayout()
-        trans_row.setSpacing(6)
-        trans_row.setAlignment(Qt.AlignCenter)
-
-        self.deck_prev_btn = QPushButton()
-        self.deck_prev_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-prev.svg")))
-        self.deck_prev_btn.setFixedSize(34, 34)
-        self.deck_prev_btn.setToolTip("Canción anterior")
-        self.deck_prev_btn.clicked.connect(self.main.setlist_widget.play_previous)
-        trans_row.addWidget(self.deck_prev_btn)
-
-        self.deck_play_btn = QPushButton()
-        self.deck_play_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-play.svg")))
-        self.deck_play_btn.setFixedSize(40, 40)
-        self.deck_play_btn.setToolTip("Play / Pause")
-        self.deck_play_btn.clicked.connect(self.main._toggle_play)
-        trans_row.addWidget(self.deck_play_btn)
-
-        self.deck_stop_btn = QPushButton()
-        self.deck_stop_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-stop.svg")))
-        self.deck_stop_btn.setFixedSize(34, 34)
-        self.deck_stop_btn.setToolTip("Stop")
-        self.deck_stop_btn.clicked.connect(self.main._stop_playback)
-        trans_row.addWidget(self.deck_stop_btn)
-
-        self.deck_next_btn = QPushButton()
-        self.deck_next_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-next.svg")))
-        self.deck_next_btn.setFixedSize(34, 34)
-        self.deck_next_btn.setToolTip("Canción siguiente")
-        self.deck_next_btn.clicked.connect(self.main.setlist_widget.play_next)
-        trans_row.addWidget(self.deck_next_btn)
-
-        self.deck_auto_play_btn = QPushButton()
-        self.deck_auto_play_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-preset-ab.svg"), theme.SVG_ICON_ACTIVE))
-        self.deck_auto_play_btn.setFixedSize(40, 28)
-        self.deck_auto_play_btn.setCheckable(True)
-        self.deck_auto_play_btn.setToolTip("Auto-avanzar y reproducir en setlist")
-        self.deck_auto_play_btn.toggled.connect(self.main._on_auto_play_toggled)
-        trans_row.addWidget(self.deck_auto_play_btn)
-
-        parent_layout.addLayout(trans_row)
-
-    def _add_time_zone(self, parent_layout):
-        """Current time / total time labels under the transport buttons."""
-        time_row = QHBoxLayout()
-        time_row.setSpacing(8)
-        time_row.setAlignment(Qt.AlignCenter)
-        self.deck_current_time = QLabel("00:00")
-        self.deck_current_time.setStyleSheet(
-            f"color: {theme.TEXT_PRIMARY}; font-size: 12px; font-family: {theme.FONT_MONO}; "
-            f"background: transparent; min-width: 40px;"
-        )
-        self.deck_current_time.setAlignment(Qt.AlignRight)
-        time_row.addWidget(self.deck_current_time)
-        sep = QLabel("/")
-        sep.setStyleSheet(f"color: {theme.TEXT_MUTED}; font-size: 11px; background: transparent;")
-        time_row.addWidget(sep)
-        self.deck_total_time = QLabel("00:00")
-        self.deck_total_time.setStyleSheet(
-            f"color: {theme.TEXT_SECONDARY}; font-size: 12px; font-family: {theme.FONT_MONO}; "
-            f"background: transparent; min-width: 40px;"
-        )
-        self.deck_total_time.setAlignment(Qt.AlignLeft)
-        time_row.addWidget(self.deck_total_time)
-
-        # Hidden QSlider kept for compatibility with handlers that read
-        # deck_progress (playback.py uses it to coordinate seek/preview).
-        self.deck_progress = QSlider(Qt.Horizontal)
-        self.deck_progress.setRange(0, 1000)
-        self.deck_progress.setValue(0)
-        self.deck_progress.setStyleSheet(theme.playback_slider_qss())
-        self.deck_progress.setTracking(True)
-        self.deck_progress.sliderReleased.connect(self.main._on_playback_seek)
-        self.deck_progress.sliderMoved.connect(self.main._on_playback_preview)
-        self.deck_progress.setMaximumWidth(0)
-        self.deck_progress.setVisible(False)
-
-        # Global waveform (visual playback widget)
-        self._global_waveform = GlobalWaveformView(self)
-        self._global_waveform.setMinimumHeight(40)
-        self._global_waveform.setMaximumHeight(60)
-        self._global_waveform.seek_requested.connect(self.main._on_waveform_seek)
-
-        parent_layout.addLayout(time_row)
-
-    def _add_history_zone(self, parent_layout):
-        """Undo / Redo / Reset + heart (favorite) buttons in a single row."""
-        row = QHBoxLayout()
-        row.setSpacing(4)
-        row.setAlignment(Qt.AlignRight)
-
-        self.deck_undo_btn = QPushButton()
-        self.deck_undo_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-undo.svg")))
-        self.deck_undo_btn.setFixedSize(28, 28)
-        self.deck_undo_btn.setToolTip("Deshacer")
-        self.deck_undo_btn.clicked.connect(self.main._undo)
-        self.deck_undo_btn.setEnabled(self.main.state.history_idx > 0)
-        row.addWidget(self.deck_undo_btn)
-
-        self.deck_redo_btn = QPushButton()
-        self.deck_redo_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-redo.svg")))
-        self.deck_redo_btn.setFixedSize(28, 28)
-        self.deck_redo_btn.setToolTip("Rehacer")
-        self.deck_redo_btn.clicked.connect(self.main._redo)
-        self.deck_redo_btn.setEnabled(
-            self.main.state.history_idx < len(self.main.state.history) - 1
-        )
-        row.addWidget(self.deck_redo_btn)
-
-        self.deck_reset_btn = QPushButton()
-        self.deck_reset_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-history.svg")))
-        self.deck_reset_btn.setFixedSize(28, 28)
-        self.deck_reset_btn.setToolTip("Restablecer todos los cambios de pitch y volumen")
-        self.deck_reset_btn.clicked.connect(self.main._reset_all)
-        row.addWidget(self.deck_reset_btn)
-
-        # Favorites heart button
-        self.deck_heart_btn = QPushButton("♡")
-        self.deck_heart_btn.setObjectName("deckHeartBtn")
-        self.deck_heart_btn.setFixedSize(30, 30)
-        self.deck_heart_btn.setProperty("active", False)
-        self.deck_heart_btn.setToolTip("Marcar como favorita")
-        self.deck_heart_btn.clicked.connect(self._on_heart_clicked)
-        self._refresh_heart_state()
-        row.addWidget(self.deck_heart_btn)
-
-        parent_layout.addLayout(row)
-
-    def _add_metronome_zone(self, parent_layout, parent_widget):
-        """Metronome checkbox + vol/pan sliders (compact, hidden unless enabled)."""
-        from app.ui.volume_slider import VolumeSlider
-        from app.ui.pan_slider import PanSlider
-
-        # Checkbox row
-        check_row = QHBoxLayout()
-        check_row.setSpacing(6)
-        check_row.setAlignment(Qt.AlignRight)
-        self.deck_metro_icon_btn = QPushButton()
-        self.deck_metro_icon_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-metronome.svg"), theme.SVG_ICON_MUTED))
-        self.deck_metro_icon_btn.setFixedSize(22, 22)
-        self.deck_metro_icon_btn.setToolTip("Volumen del metrónomo")
-        self.deck_metro_icon_btn.setEnabled(self.main.state.click_during_playback)
-        check_row.addWidget(self.deck_metro_icon_btn)
-
-        self.deck_click_check = QCheckBox("Metrónomo")
-        self.deck_click_check.setToolTip("Metrónomo persistente durante la canción")
-        self.deck_click_check.setChecked(self.main.state.click_during_playback)
-        self.deck_click_check.stateChanged.connect(self.main._on_click_during_changed)
-        check_row.addWidget(self.deck_click_check)
-        parent_layout.addLayout(check_row)
-
-        # Sliders row (Vol + Pan), visible only when metronome is enabled
-        sliders_row = QHBoxLayout()
-        sliders_row.setSpacing(6)
-
-        vol_lbl = QLabel("Vol")
-        vol_lbl.setStyleSheet(f"color: {theme.TEXT_MUTED}; font-size: 10px; background: transparent;")
-        sliders_row.addWidget(vol_lbl)
-        self.deck_metro_vol_slider = VolumeSlider(parent=parent_widget, icons_dir=self.icons_dir)
-        self.deck_metro_vol_slider.setValue(self.main.state.metronome_volume)
-        self.deck_metro_vol_slider.valueChanged.connect(self.main._on_metronome_volume_changed)
-        self.deck_metro_vol_slider.sliderReleased.connect(self.main._on_metronome_volume_released)
-        self.deck_metro_vol_slider.setMinimumHeight(28)
-        self.deck_metro_vol_slider.setMaximumHeight(34)
-        self.deck_metro_vol_slider.setVisible(self.main.state.click_during_playback)
-        sliders_row.addWidget(self.deck_metro_vol_slider, 1)
-
-        pan_lbl = QLabel("Pan")
-        pan_lbl.setStyleSheet(f"color: {theme.TEXT_MUTED}; font-size: 10px; background: transparent;")
-        sliders_row.addWidget(pan_lbl)
-        self.deck_metro_pan_slider = PanSlider(parent=parent_widget, icons_dir=self.icons_dir)
-        self.deck_metro_pan_slider.setValue(self.main.state.metronome_pan)
-        self.deck_metro_pan_slider.valueChanged.connect(self.main._on_metronome_pan_changed)
-        self.deck_metro_pan_slider.sliderReleased.connect(self.main._on_metronome_pan_released)
-        self.deck_metro_pan_slider.setMaximumHeight(34)
-        self.deck_metro_pan_slider.setVisible(self.main.state.click_during_playback)
-        sliders_row.addWidget(self.deck_metro_pan_slider, 0)
-
-        parent_layout.addLayout(sliders_row)
-
-    def _on_heart_clicked(self):
-        """Toggle favorite state for the current song and persist via config_mgr."""
-        m = self.main
-        if not m.state.current_song_name:
+    def _on_favorite_toggled(self):
+        """Toggle the current song's favorite state, update the heart button,
+        and refresh the favorites section in the library panel so the new
+        entry appears (or disappears) immediately.
+        """
+        song_name = self.main.state.current_song_name
+        if not song_name:
+            self.deck_heart_btn.setChecked(False)
             return
-        is_fav = m.config_mgr.is_favorite(m.state.current_song_name)
-        if is_fav:
-            m.config_mgr.remove_favorite(m.state.current_song_name)
+        config_mgr = self.main.config_mgr
+        if self.deck_heart_btn.isChecked():
+            config_mgr.add_favorite(song_name)
         else:
-            m.config_mgr.add_favorite(m.state.current_song_name)
-        self._refresh_heart_state()
+            config_mgr.remove_favorite(song_name)
+        # Update the heart icon to match the new state
+        self._refresh_favorite_state()
+        # Refresh the favorites section in the library panel so the song
+        # is added/removed from the visible list immediately (matches
+        # the behavior of the context menu in library_panel.py).
+        library_widget = getattr(self.main, 'library_widget', None)
+        if library_widget is not None and hasattr(library_widget, '_refresh_favorites'):
+            library_widget._refresh_favorites()
 
-    def _refresh_heart_state(self):
-        """Update the heart button text/active state from config_mgr."""
-        m = self.main
+    def _refresh_favorite_state(self):
+        """Read the favorite state from config and reflect it on the heart button."""
+        song_name = self.main.state.current_song_name
         is_fav = False
-        if m.state.current_song_name and m.config_mgr:
-            is_fav = m.config_mgr.is_favorite(m.state.current_song_name)
-        self.deck_heart_btn.setProperty("active", is_fav)
-        self.deck_heart_btn.setText("♥" if is_fav else "♡")
-        self.deck_heart_btn.setToolTip(
-            "Quitar de favoritos" if is_fav else "Marcar como favorita"
+        if song_name and self.main.config_mgr is not None:
+            is_fav = self.main.config_mgr.is_favorite(song_name)
+        self.deck_heart_btn.blockSignals(True)
+        self.deck_heart_btn.setChecked(is_fav)
+        if is_fav:
+            self.deck_heart_btn.setIcon(
+                svg_icon(os.path.join(self.icons_dir, "fad-heart-2.svg"))
+            )
+        else:
+            self.deck_heart_btn.setIcon(
+                svg_icon(os.path.join(self.icons_dir, "fad-heart-1.svg"))
+            )
+        self.deck_heart_btn.setStyleSheet(
+            f"QPushButton {{"
+            f"  background-color: {theme.BUTTON_BG};"
+            f"  border: 1px solid {theme.BORDER};"
+            f"  border-radius: 15px;"
+            f"  color: {theme.TEXT_SECONDARY};"
+            f"}}"
+            f"QPushButton:checked {{"
+            f"  color: #ff4d4d;"
+            f"  border: 1px solid #ff4d4d;"
+            f"  background-color: rgba(255, 77, 77, 0.10);"
+            f"}}"
+            f"QPushButton:hover {{"
+            f"  color: #ff4d4d;"
+            f"  border: 1px solid #ff4d4d;"
+            f"}}"
         )
-        # Re-apply stylesheet for the property change to take effect.
-        self.deck_heart_btn.style().unpolish(self.deck_heart_btn)
-        self.deck_heart_btn.style().polish(self.deck_heart_btn)
+        self.deck_heart_btn.blockSignals(False)
 
     def _wire_signals(self):
         m = self.main
@@ -903,45 +956,49 @@ class StemDeckLayout(QWidget):
         was_updates_enabled = self.updatesEnabled() if hasattr(self, 'updatesEnabled') else True
         self.setUpdatesEnabled(False)
         try:
-            self._stems_timeline.clear_tracks()
+            while self.stems_layout.count():
+                item = self.stems_layout.takeAt(0)
+                w = item.widget()
+                if w:
+                    w.deleteLater()
+            self._deck_rows.clear()
 
             m = self.main
             category_colors = (
                 m.config_mgr.get_category_colors() if m.config_mgr else None
             )
             for name, data in m.state.stems.items():
-                self._stems_timeline.add_track(
-                    name=name,
-                    category=data.get("category", "Other"),
-                    audio=data.get("audio"),
-                    sr=m.state.mix_sr,
+                audio = data.get("audio")
+                row = DeckStemRow(
+                    name, data.get("category", "Other"),
                     volume=data.get("volume", 1.0),
                     pan=data.get("pan", 0.0),
-                    muted=data.get("muted", False),
-                    solo=data.get("solo", False),
-                    fx_enabled=data.get("fx_enabled", True),
-                    category_colors=category_colors,
+                    audio=audio, sr=m.state.mix_sr,
                     icons_dir=self.icons_dir,
+                    category_colors=category_colors
                 )
+                row.set_mute(data.get("muted", False))
+                row.set_solo(data.get("solo", False))
+                row.set_fx(data.get("fx_enabled", True))
 
-            # Set duration on the timeline ruler from the longest stem.
-            max_seconds = 0.0
-            for data in m.state.stems.values():
-                audio = data.get("audio")
-                if audio is not None:
-                    try:
-                        n = len(audio) if not hasattr(audio, "shape") else audio.shape[-1]
-                        if n > 0 and m.state.mix_sr > 0:
-                            max_seconds = max(max_seconds, n / m.state.mix_sr)
-                    except Exception:
-                        pass
-            self._stems_timeline.set_duration(max_seconds)
+                row.volume_changed.connect(m._on_stem_volume_changed)
+                row.pan_changed.connect(m._on_stem_pan_changed)
+                row.mute_toggled.connect(self._on_stem_mute_toggled)
+                row.solo_toggled.connect(self._on_stem_solo_toggled)
+                row.fx_toggled.connect(m._on_stem_fx_toggled)
+                row.name_changed.connect(m._on_stem_name_changed)
+                row.category_changed.connect(m._on_stem_category_changed)
+                row.delete_requested.connect(m._on_stem_delete)
+                row.move_up_requested.connect(m._on_stem_move_up)
+                row.move_down_requested.connect(m._on_stem_move_down)
+
+                self.stems_layout.addWidget(row)
+                self._deck_rows[name] = row
 
             # Calcular y asignar peaks del waveform global
             self._global_peaks = self._compute_global_peaks()
             if self._global_waveform is not None:
                 self._global_waveform.set_peaks(self._global_peaks)
-                self._global_waveform.set_total_duration(max_seconds)
 
             self.refresh_info_cards()
             self._update_chordpro_section()
@@ -984,22 +1041,17 @@ class StemDeckLayout(QWidget):
         m = self.main
         if name in m.state.stems:
             m.state.stems[name]["muted"] = muted
-        if hasattr(m, "_on_stem_mute_toggled"):
-            m._on_stem_mute_toggled(name, muted)
+        m._on_stem_mute_toggled(name, muted)
 
     def _on_stem_solo_toggled(self, name, solo):
         m = self.main
         if name in m.state.stems:
             m.state.stems[name]["solo"] = solo
-        if hasattr(m, "_on_stem_solo_toggled"):
-            m._on_stem_solo_toggled(name, solo)
+        m._on_stem_solo_toggled(name, solo)
 
     def update_playhead(self, ratio: float):
-        # Update the per-track playhead (hidden, kept for compatibility)
-        # and the shared red playhead in the unified timeline.
         for row in self._deck_rows.values():
-            row.set_playhead(-1.0)
-        self._stems_timeline.set_playhead(ratio)
+            row.set_playhead(ratio)
         if self._global_waveform is not None:
             self._global_waveform.set_progress(ratio)
 
@@ -1011,8 +1063,6 @@ class StemDeckLayout(QWidget):
         else:
             text = "Sin canción cargada"
         self.hdr_song_title.setText(text)
-        if hasattr(self, "deck_heart_btn"):
-            self._refresh_heart_state()
 
     def update_visibility(self, song_source: str, has_song: bool):
         in_library = song_source == "library"
@@ -1020,6 +1070,8 @@ class StemDeckLayout(QWidget):
         self.hdr_close_btn.setVisible(has_song)
         self._update_actions_row(in_library, is_folder)
         self._update_chordpro_section()
+        if hasattr(self, 'deck_heart_btn'):
+            self._refresh_favorite_state()
 
     def _update_actions_row(self, in_library, is_folder):
         m = self.main
