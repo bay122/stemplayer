@@ -10,4 +10,23 @@ def get_base_path():
 
 
 def get_icons_dir():
-    return os.path.join(get_base_path(), "..", "..", "icons", "svgs")
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, "icons")
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "icons", "svgs")
+
+
+def get_config_dir():
+    if os.name == "nt":
+        base = os.environ.get("APPDATA", os.path.expanduser("~"))
+        path = os.path.join(base, "StemPlayer")
+    elif sys.platform == "darwin":
+        path = os.path.join(os.path.expanduser("~"), "Library", "Application Support", "StemPlayer")
+    else:
+        base = os.environ.get("XDG_CONFIG_HOME", os.path.join(os.path.expanduser("~"), ".config"))
+        path = os.path.join(base, "stemsplayer")
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
+def get_config_file():
+    return os.path.join(get_config_dir(), "config.json")

@@ -10,9 +10,10 @@ from PySide6.QtGui import QColor, QPixmap
 from app.ui.theme import current as theme
 from app.ui.svg_icon import svg_icon
 from app.services.providers import get_available_providers
+from app.utils.crypto import encrypt_value, decrypt_value
 from app.version import (
     APP_NAME, APP_VERSION, APP_AUTHOR, APP_AUTHOR_EMAIL,
-    APP_GITHUB, APP_WEBSITE, APP_LICENSE
+    APP_GITHUB, APP_WEBSITE, APP_AUTOR_WEBSITE, APP_LICENSE
 )
 
 
@@ -391,7 +392,7 @@ class SettingsDialog(QDialog):
         self._api_key_input = QLineEdit()
         self._api_key_input.setPlaceholderText("Ingresa tu API Key...")
         self._api_key_input.setEchoMode(QLineEdit.EchoMode.Password)
-        saved_key = settings.value(f"ai/api_key/{saved_provider}", "")
+        saved_key = decrypt_value(settings.value(f"ai/api_key/{saved_provider}", ""))
         if saved_key:
             self._api_key_input.setText(saved_key)
         self._api_key_input.setStyleSheet(f"""
@@ -456,7 +457,7 @@ class SettingsDialog(QDialog):
     def _on_provider_changed(self, index):
         provider_id = self._provider_combo.itemData(index)
         settings = QSettings("StemPlayer", "StemPlayer")
-        saved_key = settings.value(f"ai/api_key/{provider_id}", "")
+        saved_key = decrypt_value(settings.value(f"ai/api_key/{provider_id}", ""))
         self._api_key_input.setText(saved_key)
         saved_model = settings.value(f"ai/model/{provider_id}", "")
         self._model_input.setText(saved_model)
@@ -481,7 +482,7 @@ class SettingsDialog(QDialog):
         settings = QSettings("StemPlayer", "StemPlayer")
         settings.setValue("ai/provider", provider_id)
         if api_key:
-            settings.setValue(f"ai/api_key/{provider_id}", api_key)
+            settings.setValue(f"ai/api_key/{provider_id}", encrypt_value(api_key))
         if model:
             settings.setValue(f"ai/model/{provider_id}", model)
 
@@ -553,9 +554,10 @@ class SettingsDialog(QDialog):
             r.addWidget(v, 1)
             details.addLayout(r)
 
+        row("Web:", f'<a href="{APP_WEBSITE}" style="color: {theme.ACCENT_INFO};">{APP_WEBSITE}</a>', is_link=True)
         row("Autor:", APP_AUTHOR)
         row("Email:", APP_AUTHOR_EMAIL)
-        row("Web:", f'<a href="{APP_WEBSITE}" style="color: {theme.ACCENT_INFO};">{APP_WEBSITE}</a>', is_link=True)
+        row("Web del autor:", f'<a href="{APP_AUTOR_WEBSITE}" style="color: {theme.ACCENT_INFO};">{APP_AUTOR_WEBSITE}</a>', is_link=True)
         row("GitHub:", f'<a href="{APP_GITHUB}" style="color: {theme.ACCENT_INFO};">{APP_GITHUB}</a>', is_link=True)
         row("Licencia:", APP_LICENSE)
 

@@ -8,6 +8,7 @@ from app.services import create_sync_file
 from app.services.chord_analysis import ChordAnalysisThread
 from app.services.openrouter_service import (OpenRouterLLMThread, build_sync_prompt, _parse_sync_response)
 from app.services.providers import get_available_providers, get_provider
+from app.utils.crypto import encrypt_value, decrypt_value
 from app.controllers.deck_sync import DeckStatusMixin
 
 
@@ -88,7 +89,7 @@ class ChordProGenerationMixin(DeckStatusMixin):
     def _get_ai_config(self):
         settings = QSettings("StemPlayer", "StemPlayer")
         provider_id = settings.value(_PROVIDER_SETTING, "openrouter")
-        api_key = settings.value(_API_KEY_TPL.format(provider_id), "")
+        api_key = decrypt_value(settings.value(_API_KEY_TPL.format(provider_id), ""))
         model = settings.value(_MODEL_TPL.format(provider_id), "")
         if not model:
             try:
@@ -100,7 +101,7 @@ class ChordProGenerationMixin(DeckStatusMixin):
     def _save_ai_config(self, provider_id: str, api_key: str, model: str):
         settings = QSettings("StemPlayer", "StemPlayer")
         settings.setValue(_PROVIDER_SETTING, provider_id)
-        settings.setValue(_API_KEY_TPL.format(provider_id), api_key)
+        settings.setValue(_API_KEY_TPL.format(provider_id), encrypt_value(api_key))
         if model:
             settings.setValue(_MODEL_TPL.format(provider_id), model)
 

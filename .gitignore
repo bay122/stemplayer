@@ -79,6 +79,9 @@ test/*.wav
 .env
 config.json
 
+# Encryption keys
+*.key
+
 # Assets (large media files)
 assets/
 

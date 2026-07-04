@@ -1,7 +1,9 @@
 import json
 import os
 
-CONFIG_FILE = "config.json"
+from app.utils.paths import get_config_file
+
+CONFIG_FILE = get_config_file()
 
 
 class ConfigManager:
@@ -58,6 +60,7 @@ class ConfigManager:
 	def _save(self, config: dict = None):
 		if config is None:
 			config = self.config
+		os.makedirs(os.path.dirname(self.config_file), exist_ok=True)
 		with open(self.config_file, "w", encoding="utf-8") as f:
 			json.dump(config, f, indent=2, ensure_ascii=False)
 
