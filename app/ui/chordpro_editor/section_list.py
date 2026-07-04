@@ -15,9 +15,10 @@ from PySide6.QtWidgets import (
     QWidget,
     QButtonGroup,
 )
-
+import os
 from app.ui.chordpro_editor.constants import SECTION_LABELS, SECTION_TYPES
 from app.ui.theme import current as theme
+from app.ui.svg_icon import svg_icon
 
 
 _KIND_SHORT = {
@@ -127,21 +128,27 @@ class SectionListPanel(QWidget):
         layout.addWidget(self._list, 1)
 
         btn_row = QHBoxLayout()
-        self._add_btn = QPushButton("✚")
+        self._add_btn = QPushButton()
+		#icon plus
+        self._add_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-plus.svg")))
         self._add_btn.setToolTip("Añadir sección")
         self._add_btn.clicked.connect(self._on_add_clicked)
-        self._dup_btn = QPushButton("📋")
+        self._dup_btn = QPushButton()
         self._dup_btn.setToolTip("Duplicar sección")
         self._dup_btn.clicked.connect(self._on_duplicate_clicked)
-        self._del_btn = QPushButton("🗑")
+        self._dup_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-copy.svg")))
+        self._del_btn = QPushButton()
         self._del_btn.setToolTip("Eliminar sección")
+        self._del_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-eraser.svg")))
         self._del_btn.clicked.connect(self._on_remove_clicked)
-        self._up_btn = QPushButton("↑")
+        self._up_btn = QPushButton()
         self._up_btn.setToolTip("Subir")
         self._up_btn.clicked.connect(self._on_up_clicked)
-        self._down_btn = QPushButton("↓")
+        self._up_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-caret-up.svg")))
+        self._down_btn = QPushButton()
         self._down_btn.setToolTip("Bajar")
         self._down_btn.clicked.connect(self._on_down_clicked)
+        self._down_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-caret-down.svg")))
         for b in (self._add_btn, self._dup_btn, self._del_btn, self._up_btn, self._down_btn):
             b.setFixedSize(30, 28)
             btn_row.addWidget(b)

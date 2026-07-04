@@ -134,7 +134,7 @@ class ChordProEditorWindow(QMainWindow):
         # treats the high-resolution printer DPI as a multiplier.
         body_chunks = []
         for sec in self._view.document().sections:
-            sec_html = render_section_html(sec.name, sec.lines, font_size=18, font_unit="pt")
+            sec_html = render_section_html(sec.name, sec.lines, font_size=14, font_unit="pt")
             sec_html = sec_html.replace(
                 f"color: {theme.ACCENT_SUCCESS}", "color: #000000; font-weight: bold;"
             )
@@ -142,13 +142,13 @@ class ChordProEditorWindow(QMainWindow):
 
         meta = self._view.document().metadata
         html = [
-            "<html><head><meta charset='utf-8'></head><body style='font-family: sans-serif; font-size: 18pt;'>",
-            f"<h1 style='text-align: center; margin-bottom: 0; font-size: 28pt;'>{meta.title or 'Sin Título'}</h1>",
+            "<html><head><meta charset='utf-8'></head><body style='font-family: sans-serif; font-size: 14pt;'>",
+            f"<h1 style='text-align: center; margin-bottom: 0; font-size: 18pt;'>{meta.title or 'Sin Título'}</h1>",
         ]
         if meta.artist:
-            html.append(f"<h2 style='text-align: center; margin-top: 6px; color: #555; font-size: 20pt;'>{meta.artist}</h2>")
+            html.append(f"<h2 style='text-align: center; margin-top: 6px; color: #555; font-size: 14pt;'>{meta.artist}</h2>")
         if meta.key:
-            html.append(f"<p style='text-align: center; font-size: 18pt;'>Tonalidad: <strong>{meta.key}</strong></p><hr>")
+            html.append(f"<p style='text-align: center; font-size: 16pt;'>Tonalidad: <strong>{meta.key}</strong></p><hr>")
         html.extend(body_chunks)
         html.append("</body></html>")
 
@@ -156,12 +156,12 @@ class ChordProEditorWindow(QMainWindow):
         # Set a sane default font on the document. Without this, the
         # document may fall back to a tiny default that even the
         # <body> font-size can't override in some Qt versions.
-        doc.setDefaultFont(QFont("sans-serif", 18))
+        doc.setDefaultFont(QFont("sans-serif", 14))
         doc.setHtml("".join(html))
         printer = QPrinter(QPrinter.HighResolution)
         printer.setOutputFormat(QPrinter.PdfFormat)
         printer.setOutputFileName(dest_path)
-        printer.setPageMargins(QMarginsF(15, 15, 15, 15), QPageLayout.Millimeter)
+        printer.setPageMargins(QMarginsF(5, 5, 5, 5), QPageLayout.Millimeter)
         try:
             doc.print_(printer)
             QMessageBox.information(self, "Éxito", "PDF exportado correctamente.")

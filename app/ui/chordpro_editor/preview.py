@@ -13,7 +13,7 @@ def _render_chordpro_html(chordpro_text: str) -> str:
     imports _render_chordpro_html directly.
     """
     lines = chordpro_text.split('\n')
-    return render_lines_html(lines, font_size=22)
+    return render_lines_html(lines, font_size=16)
 
 
 class ChordProPreview(QTextBrowser):
@@ -31,7 +31,7 @@ class ChordProPreview(QTextBrowser):
             return
         self._last_text = text
         self._last_key = key
-        html = render_lines_html(text.split('\n'), font_size=22)
+        html = render_lines_html(text.split('\n'), font_size=16)
         self.setHtml(html)
 
     def clear_cache(self) -> None:

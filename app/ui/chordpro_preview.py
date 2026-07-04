@@ -15,6 +15,9 @@ class ChordProPreviewWidget(QWidget):
         self.parent_window = parent
         self._init_ui()
 
+    def set_icons_dir(self, icons_dir: str):
+        self.icons_dir = icons_dir
+
     def _init_ui(self):
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
