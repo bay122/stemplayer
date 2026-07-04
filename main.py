@@ -107,16 +107,20 @@ def main():
 
         player.show()
         player.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        player.destroyed.connect(splash.close_splash)
+        if splash is not None:
+            player.destroyed.connect(splash.close_splash)
         player.activateWindow()
         player.raise_()
 
         sys.exit(app.exec())
     except Exception as e:
-        print(f"ERROR: {e}")
         import traceback
+        print(f"ERROR: {e}")
         traceback.print_exc()
-        input("Presiona Enter para salir...")
+        try:
+            input("Presiona Enter para salir...")
+        except RuntimeError:
+            pass
         sys.exit(1)
 
 
