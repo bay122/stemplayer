@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QSizePolicy, QLineEdit, QComboBox, QFrame, QScrollArea
 )
 from PySide6.QtCore import Qt, Signal, QRect
-from PySide6.QtGui import QPainter, QColor, QPen, QLinearGradient
+from PySide6.QtGui import QPainter, QColor, QPen, QLinearGradient, QFont
 from app.ui.svg_icon import svg_icon
 from app.ui.theme import current as theme
 from app.ui.volume_slider import VolumeSlider
@@ -235,8 +235,7 @@ class ZoomableWaveformView(QWidget):
         # Texto del grid (en mm:ss)
         if self._total_duration > 0:
             painter.setPen(QColor(150, 150, 150, 120))
-            font = painter.font()
-            font.setPointSize(7)
+            font = QFont(painter.font().family(), 7)
             painter.setFont(font)
             for i in range(n_grid + 1):
                 x = int(i * w / n_grid)
