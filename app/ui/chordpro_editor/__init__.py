@@ -14,7 +14,15 @@ def __getattr__(name):
                         "artist": doc.metadata.artist,
                         "key": doc.metadata.key,
                     },
-                    "sections": doc.sections,
+                    "sections": [
+                        {
+                            "name": s.name,
+                            "kind": s.kind,
+                            "lines": s.lines,
+                            "tag": s.tag,
+                        }
+                        for s in doc.sections
+                    ],
                 }
         return _CompatParser
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
