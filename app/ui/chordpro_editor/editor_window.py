@@ -1,7 +1,7 @@
 import os
 
 from PySide6.QtCore import Qt, Signal, QMarginsF
-from PySide6.QtGui import QAction, QKeySequence, QTextDocument, QPageLayout
+from PySide6.QtGui import QAction, QKeySequence, QTextDocument, QPageLayout, QFont
 from PySide6.QtPrintSupport import QPrinter
 from PySide6.QtWidgets import (
     QFileDialog,
@@ -128,9 +128,13 @@ class ChordProEditorWindow(QMainWindow):
         if not dest_path:
             return
 
+        # Use "pt" for font sizes so QPrinter interprets them correctly
+        # at print resolution. Using "px" makes the body text microscopic
+        # because QTextDocument's CSS-pixel-to-device-pixel conversion
+        # treats the high-resolution printer DPI as a multiplier.
         body_chunks = []
         for sec in self._view.document().sections:
-            sec_html = render_section_html(sec.name, sec.lines, font_size=26)
+            sec_html = render_section_html(sec.name, sec.lines, font_size=18, font_unit="pt")
             sec_html = sec_html.replace(
                 f"color: {theme.ACCENT_SUCCESS}", "color: #000000; font-weight: bold;"
             )
@@ -138,17 +142,21 @@ class ChordProEditorWindow(QMainWindow):
 
         meta = self._view.document().metadata
         html = [
-            "<html><head><meta charset='utf-8'></head><body style='font-family: sans-serif;'>",
-            f"<h1 style='text-align: center; margin-bottom: 0; font-size: 32px;'>{meta.title or 'Sin Título'}</h1>",
+            "<html><head><meta charset='utf-8'></head><body style='font-family: sans-serif; font-size: 18pt;'>",
+            f"<h1 style='text-align: center; margin-bottom: 0; font-size: 28pt;'>{meta.title or 'Sin Título'}</h1>",
         ]
         if meta.artist:
-            html.append(f"<h2 style='text-align: center; margin-top: 6px; color: #555; font-size: 22px;'>{meta.artist}</h2>")
+            html.append(f"<h2 style='text-align: center; margin-top: 6px; color: #555; font-size: 20pt;'>{meta.artist}</h2>")
         if meta.key:
-            html.append(f"<p style='text-align: center; font-size: 20px;'>Tonalidad: <strong>{meta.key}</strong></p><hr>")
+            html.append(f"<p style='text-align: center; font-size: 18pt;'>Tonalidad: <strong>{meta.key}</strong></p><hr>")
         html.extend(body_chunks)
         html.append("</body></html>")
 
         doc = QTextDocument()
+        # Set a sane default font on the document. Without this, the
+        # document may fall back to a tiny default that even the
+        # <body> font-size can't override in some Qt versions.
+        doc.setDefaultFont(QFont("sans-serif", 18))
         doc.setHtml("".join(html))
         printer = QPrinter(QPrinter.HighResolution)
         printer.setOutputFormat(QPrinter.PdfFormat)

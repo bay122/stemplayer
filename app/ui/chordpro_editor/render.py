@@ -72,7 +72,7 @@ def _html_escape(s: str) -> str:
 
 def _render_aligned_line(chord_row: str, lyric_row: str,
                          chord_color: str, chord_fs: int,
-                         font_size: int) -> str:
+                         font_size: int, font_unit: str = "px") -> str:
     """Render one aligned chord-over-lyric pair as HTML.
 
     The chord row is wrapped in a <pre>-like block with a transparent
@@ -100,19 +100,19 @@ def _render_aligned_line(chord_row: str, lyric_row: str,
             token = chord_row[i:j]
             chord_html.append(
                 f"<span style='color: {chord_color}; font-weight: bold; "
-                f"font-size: {chord_fs}px;'>{_html_escape(token)}</span>"
+                f"font-size: {chord_fs}{font_unit};'>{_html_escape(token)}</span>"
             )
             i = j
         chord_line = "".join(chord_html)
         chord_block = (
-            f"<div style='font-family: monospace; font-size: {chord_fs}px; "
+            f"<div style='font-family: monospace; font-size: {chord_fs}{font_unit}; "
             f"line-height: 1.15; white-space: pre; margin: 0;'>"
             f"{chord_line}</div>"
         )
     else:
         chord_block = ""
     lyric_block = (
-        f"<div style='font-family: monospace; font-size: {font_size}px; "
+        f"<div style='font-family: monospace; font-size: {font_size}{font_unit}; "
         f"line-height: 1.5; white-space: pre-wrap; margin: 0 0 "
         f"{font_size * 0.4:.0f}px 0;'>{_html_escape(lyric_row)}</div>"
     )
@@ -122,7 +122,8 @@ def _render_aligned_line(chord_row: str, lyric_row: str,
 def render_lines_html(lines: list, font_size: int = 18,
                       align: str = "left",
                       chord_color: str | None = None,
-                      opacity: float = 1.0) -> str:
+                      opacity: float = 1.0,
+                      font_unit: str = "px") -> str:
     """Render a list of chordpro lines as HTML with chord-over-lyric layout.
 
     Supports two formats:
@@ -134,10 +135,13 @@ def render_lines_html(lines: list, font_size: int = 18,
 
     Args:
         lines: list of chordpro lines.
-        font_size: base font size in pixels for lyrics.
+        font_size: base font size for lyrics.
         align: "left" | "center" | "right" for the lyrics block.
         chord_color: override for the chord text color (defaults to theme accent).
         opacity: 0.0 to 1.0 opacity of the whole block.
+        font_unit: CSS font-size unit. Use "px" for screen rendering and
+            "pt" for printing (avoids the CSS-pixel-to-device-pixel
+            conversion issue in QPrinter that makes text microscopic).
 
     Returns:
         HTML fragment (no outer <html>/<body>).
@@ -146,7 +150,7 @@ def render_lines_html(lines: list, font_size: int = 18,
     chord_fs = font_size + 2
     opacity_attr = f" opacity: {opacity};" if opacity < 1.0 else ""
     parts = [
-        f"<div style='font-family: monospace; font-size: {font_size}px; "
+        f"<div style='font-family: monospace; font-size: {font_size}{font_unit}; "
         f"text-align: {align}; line-height: 1.4;{opacity_attr}'>"
     ]
 
@@ -173,19 +177,20 @@ def render_lines_html(lines: list, font_size: int = 18,
         if not chord_row.strip() and not lyric_row.strip():
             continue
         parts.append(_render_aligned_line(
-            chord_row, lyric_row, chord_color, chord_fs, font_size
+            chord_row, lyric_row, chord_color, chord_fs, font_size, font_unit
         ))
 
     parts.append("</div>")
     return "".join(parts)
 
 
-def render_section_html(name: str, lines: list, font_size: int = 18) -> str:
+def render_section_html(name: str, lines: list, font_size: int = 18,
+                        font_unit: str = "px") -> str:
     """Render a section with its name as a heading, then the lines."""
     heading = (
         f"<h3 style='margin: 16px 0 4px 0; color: {theme.TEXT_PRIMARY}; "
-        f"font-family: sans-serif; font-size: {font_size + 4}px;'>"
+        f"font-family: sans-serif; font-size: {font_size + 4}{font_unit};'>"
         f"{_html_escape(name)}</h3>"
     )
-    body = render_lines_html(lines, font_size=font_size)
+    body = render_lines_html(lines, font_size=font_size, font_unit=font_unit)
     return heading + body
