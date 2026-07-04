@@ -49,28 +49,33 @@ class StemUIMixin:
 
     def _rebuild_stems_ui(self):
         self._clear_stems_ui()
-        for name, data in self.state.stems.items():
-            widget = StemItemWidget(
-                name, data.get("category", "Other"),
-                data.get("volume", 1.0), self.icons_dir
-            )
-            widget.set_pan(data.get("pan", 0.0))
-            widget.set_mute(data.get("muted", False))
-            widget.set_solo(data.get("solo", False))
-            widget.set_fx(data.get("fx_enabled", True))
-            widget.volume_changed.connect(lambda n, v: self._on_stem_volume_changed(n, v))
-            widget.volume_slider.sliderReleased.connect(lambda n=name: self._on_stem_volume_released(n))
-            widget.pan_changed.connect(lambda n, v: self._on_stem_pan_changed(n, v))
-            widget.pan_slider.sliderReleased.connect(lambda n=name: self._on_stem_pan_released(n))
-            widget.mute_toggled.connect(lambda n, m: self._on_stem_mute_toggled(n, m))
-            widget.solo_toggled.connect(lambda n, s: self._on_stem_solo_toggled(n, s))
-            widget.fx_toggled.connect(lambda n, f: self._on_stem_fx_toggled(n, f))
-            widget.name_changed.connect(lambda o, n: self._on_stem_name_changed(o, n))
-            widget.category_changed.connect(lambda n, c: self._on_stem_category_changed(n, c))
-            widget.delete_requested.connect(lambda n: self._on_stem_delete(n))
-            widget.move_up_requested.connect(lambda n: self._on_stem_move_up(n))
-            widget.move_down_requested.connect(lambda n: self._on_stem_move_down(n))
-            self.stems_layout.addWidget(widget)
+        was_updates_enabled = self.updatesEnabled() if hasattr(self, 'updatesEnabled') else True
+        self.setUpdatesEnabled(False)
+        try:
+            for name, data in self.state.stems.items():
+                widget = StemItemWidget(
+                    name, data.get("category", "Other"),
+                    data.get("volume", 1.0), self.icons_dir
+                )
+                widget.set_pan(data.get("pan", 0.0))
+                widget.set_mute(data.get("muted", False))
+                widget.set_solo(data.get("solo", False))
+                widget.set_fx(data.get("fx_enabled", True))
+                widget.volume_changed.connect(lambda n, v: self._on_stem_volume_changed(n, v))
+                widget.volume_slider.sliderReleased.connect(lambda n=name: self._on_stem_volume_released(n))
+                widget.pan_changed.connect(lambda n, v: self._on_stem_pan_changed(n, v))
+                widget.pan_slider.sliderReleased.connect(lambda n=name: self._on_stem_pan_released(n))
+                widget.mute_toggled.connect(lambda n, m: self._on_stem_mute_toggled(n, m))
+                widget.solo_toggled.connect(lambda n, s: self._on_stem_solo_toggled(n, s))
+                widget.fx_toggled.connect(lambda n, f: self._on_stem_fx_toggled(n, f))
+                widget.name_changed.connect(lambda o, n: self._on_stem_name_changed(o, n))
+                widget.category_changed.connect(lambda n, c: self._on_stem_category_changed(n, c))
+                widget.delete_requested.connect(lambda n: self._on_stem_delete(n))
+                widget.move_up_requested.connect(lambda n: self._on_stem_move_up(n))
+                widget.move_down_requested.connect(lambda n: self._on_stem_move_down(n))
+                self.stems_layout.addWidget(widget)
+        finally:
+            self.setUpdatesEnabled(was_updates_enabled)
 
         if getattr(self, 'deck_layout', None) is not None:
             try:

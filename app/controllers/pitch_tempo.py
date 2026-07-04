@@ -201,7 +201,6 @@ class PitchTempoMixin:
                 self.deck_layout.deck_click_check.setChecked(False)
                 self.deck_layout.deck_metro_vol_slider.setVisible(False)
                 self.deck_layout.deck_metro_pan_slider.setVisible(False)
-                self.deck_layout.deck_metro_icon_btn.setEnabled(False)
             except Exception:
                 pass
         self._rebuild_stems_ui()

@@ -20,7 +20,6 @@ class CountInClickMixin:
             try:
                 self.deck_layout.deck_metro_vol_slider.setVisible(show)
                 self.deck_layout.deck_metro_pan_slider.setVisible(show)
-                self.deck_layout.deck_metro_icon_btn.setEnabled(show)
                 self.deck_layout.deck_click_check.blockSignals(True)
                 self.deck_layout.deck_click_check.setChecked(show)
                 self.deck_layout.deck_click_check.blockSignals(False)
