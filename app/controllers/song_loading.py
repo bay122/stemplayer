@@ -52,6 +52,7 @@ class SongLoadingMixin(DeckStatusMixin):
             folder, self.state.mix_sr,
             pre_key=metadata.get("detected_key") if metadata else None,
             pre_bpm=metadata.get("detected_bpm") if metadata else None,
+            pre_click_offset_samples=metadata.get("click_offset_samples") if metadata else None,
             cache_folder=folder if source == "library" else None,
             stem_filters=self.config_mgr.get_stem_filters()
         )
@@ -143,7 +144,6 @@ class SongLoadingMixin(DeckStatusMixin):
                     bool(self.state.current_song_name)
                 )
                 self.deck_layout.update_save_buttons()
-                self.deck_layout.rebuild_stems()
             except Exception:
                 pass
 
@@ -300,6 +300,7 @@ class SongLoadingMixin(DeckStatusMixin):
             song_folder, self.state.mix_sr,
             pre_key=meta.get("detected_key") if meta else None,
             pre_bpm=meta.get("detected_bpm") if meta else None,
+            pre_click_offset_samples=meta.get("click_offset_samples") if meta else None,
             cache_folder=song_folder,
             stem_filters=self.config_mgr.get_stem_filters()
         )

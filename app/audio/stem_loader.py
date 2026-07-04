@@ -1,5 +1,6 @@
 import os
 import unicodedata
+import hashlib
 import numpy as np
 import soundfile as sf
 import librosa
@@ -10,8 +11,65 @@ from app.audio.fast_audio import fast_audio_load
 from app.utils.constants import KEY_MAP
 
 
+_BEAT_PROBE_SECONDS = 30
+_BEAT_PROBE_SR = 22050
+_BEAT_TRACK_CACHE = {}
+
+
 def _strip_accents(text: str) -> str:
     return unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('ascii')
+
+
+def _probe_click_offset(click_audio: np.ndarray, sr: int, start_bpm: float = None):
+    """Detecta el offset del primer beat sobre una versión resumida del click.
+
+    Devuelve el offset en samples del sr original. Usa una versión mono y
+    downsampleada a 22050 Hz (suficiente para onset detection) y un máximo
+    de _BEAT_PROBE_SECONDS, que es más que bastante para encontrar el primer
+    downbeat y reduce el coste de O(n) -> O(1) en duración.
+    """
+    if click_audio is None or len(click_audio) == 0:
+        return 0
+
+    if click_audio.ndim > 1:
+        click_audio = np.mean(click_audio, axis=1)
+
+    max_samples = _BEAT_PROBE_SECONDS * sr
+    if len(click_audio) > max_samples:
+        probe = click_audio[:max_samples]
+    else:
+        probe = click_audio
+
+    if sr != _BEAT_PROBE_SR:
+        probe = librosa.resample(probe, orig_sr=sr, target_sr=_BEAT_PROBE_SR)
+        probe_sr = _BEAT_PROBE_SR
+    else:
+        probe_sr = sr
+
+    cache_key = (
+        hashlib.md5(np.ascontiguousarray(probe).tobytes()).hexdigest(),
+        int(sr),
+        float(start_bpm) if start_bpm else 0.0,
+    )
+    cached = _BEAT_TRACK_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
+    kwargs = {}
+    if start_bpm and start_bpm > 0:
+        kwargs["start_bpm"] = float(start_bpm)
+    tempo, beats = librosa.beat.beat_track(y=probe, sr=probe_sr, **kwargs)
+    if len(beats) == 0:
+        offset_samples = 0
+    else:
+        offset_samples = librosa.frames_to_samples(beats[0])
+        scale = sr / probe_sr
+        offset_samples = int(round(offset_samples * scale))
+
+    if len(_BEAT_TRACK_CACHE) > 32:
+        _BEAT_TRACK_CACHE.clear()
+    _BEAT_TRACK_CACHE[cache_key] = offset_samples
+    return offset_samples
 
 
 class StemLoaderThread(QThread):
@@ -23,13 +81,18 @@ class StemLoaderThread(QThread):
     error = Signal(str)
 
     def __init__(self, folder_path: str, mix_sr: int = 44100, pre_key: str = None,
-                 pre_bpm: int = None, cache_folder: str = None,
-                 stem_filters: dict = None):
+                 pre_bpm: int = None, pre_click_offset_samples: int = None,
+                 cache_folder: str = None, stem_filters: dict = None):
         super().__init__()
         self.folder_path = folder_path
         self.mix_sr = mix_sr
         self.pre_key = pre_key
         self.pre_bpm = pre_bpm
+        self.pre_click_offset_samples = (
+            int(pre_click_offset_samples)
+            if pre_click_offset_samples is not None and int(pre_click_offset_samples) > 0
+            else None
+        )
         self.cache_folder = cache_folder
         self._is_cancelled = False
         self.stem_filters = stem_filters or {
@@ -154,11 +217,14 @@ class StemLoaderThread(QThread):
                 key = self.pre_key
                 bpm = self.pre_bpm
 
-                click_offset_samples = 0
-                if click_audio is not None:
-                    tempo, beats = librosa.beat.beat_track(y=click_audio, sr=self.mix_sr)
-                    if len(beats) > 0:
-                        click_offset_samples = librosa.frames_to_samples(beats[0])
+                if self.pre_click_offset_samples is not None:
+                    click_offset_samples = self.pre_click_offset_samples
+                elif click_audio is not None:
+                    click_offset_samples = _probe_click_offset(
+                        click_audio, self.mix_sr, start_bpm=bpm
+                    )
+                else:
+                    click_offset_samples = 0
             else:
                 self.progress.emit("Analizando mix ...")
                 mix = np.zeros(max(len(s["audio"]) for s in stems.values()))
@@ -174,15 +240,18 @@ class StemLoaderThread(QThread):
                 key = KEY_MAP[int(np.argmax(chroma_mean))]
 
                 self.progress.emit("Detectando BPM ...")
-                click_offset_samples = 0
                 if click_audio is not None:
-                    tempo, beats = librosa.beat.beat_track(y=click_audio, sr=self.mix_sr)
-                    if len(beats) > 0:
-                        click_offset_samples = librosa.frames_to_samples(beats[0])
+                    tempo, _ = librosa.beat.beat_track(y=click_audio, sr=self.mix_sr)
                 else:
                     tempo, _ = librosa.beat.beat_track(y=mix, sr=self.mix_sr)
 
                 bpm = round(float(np.ravel(tempo)[0]))
+
+                click_offset_samples = 0
+                if click_audio is not None:
+                    click_offset_samples = _probe_click_offset(
+                        click_audio, self.mix_sr, start_bpm=bpm
+                    )
 
             if self._is_cancelled:
                 return
