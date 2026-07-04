@@ -69,17 +69,26 @@ class ChordProEditorView(QWidget):
         save_btn = QPushButton("Guardar")
         save_btn.clicked.connect(self.save_requested)
 
-        for label, widget in (("Título", self._title_edit),
-                              ("Artista", self._artist_edit),
-                              ("Tono", self._key_edit)):
-            act = QWidget()
-            row = QHBoxLayout(act)
-            row.setContentsMargins(0, 0, 0, 0)
-            row.setSpacing(4)
-            row.addWidget(QLabel(f"{label}:"))
-            row.addWidget(widget)
-            header.addWidget(act)
-        # Spacer pushes separator + save to the right
+        # All three label+input pairs in one QWidget so we control the gaps
+        # precisely: small (2px) inside each pair, larger (12px) between pairs.
+        fields_widget = QWidget()
+        fields_layout = QHBoxLayout(fields_widget)
+        fields_layout.setContentsMargins(0, 0, 0, 0)
+        fields_layout.setSpacing(12)
+        for i, (label, widget) in enumerate((("Título", self._title_edit),
+                                            ("Artista", self._artist_edit),
+                                            ("Tono", self._key_edit))):
+            lbl = QLabel(f"{label}:")
+            lbl.setBuddy(widget)
+            pair = QWidget()
+            pair_layout = QHBoxLayout(pair)
+            pair_layout.setContentsMargins(0, 0, 0, 0)
+            pair_layout.setSpacing(2)
+            pair_layout.addWidget(lbl)
+            pair_layout.addWidget(widget)
+            fields_layout.addWidget(pair)
+        header.addWidget(fields_widget)
+        # Spacer pushes Save to the right
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         header.addWidget(spacer)

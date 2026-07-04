@@ -26,7 +26,7 @@ class ChordProTextEditor(QPlainTextEdit):
     def __init__(self, scale_provider=None, parent=None):
         super().__init__(parent)
         self._scale_provider = scale_provider or (lambda: [])
-        self.setFont(QFont("Consolas", 14))
+        self.setFont(QFont("Consolas", 16))
         self.setLineWrapMode(QPlainTextEdit.NoWrap)
         self.setTabChangesFocus(False)
         self.setTabStopDistance(4 * self.fontMetrics().horizontalAdvance(" "))
