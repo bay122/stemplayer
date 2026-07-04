@@ -49,6 +49,7 @@ from app.controllers.pitch_tempo import PitchTempoMixin
 from app.controllers.playback import PlaybackMixin
 from app.controllers.chordpro_preview import ChordProPreviewMixin
 from app.controllers.chordpro_generation import ChordProGenerationMixin
+from app.controllers.check_update import CheckUpdateMixin
 
 
 class StemPlayer(
@@ -64,6 +65,7 @@ class StemPlayer(
 	PlaybackMixin,
 	ChordProPreviewMixin,
 	ChordProGenerationMixin,
+	CheckUpdateMixin,
 ):
 	def __init__(self, theme=None):
 		super().__init__()
@@ -108,6 +110,8 @@ class StemPlayer(
 		if preferred == "deck":
 			self.body_stack.setCurrentIndex(1)
 			self.current_layout = "deck"
+
+		self._init_updater()
 
 	# ------------------------------------------------------------------
 	# UI Construction
@@ -240,7 +244,13 @@ class StemPlayer(
 	def _open_settings(self):
 		filters = self.config_mgr.get_stem_filters()
 		port = self.config_mgr.get_stream_port()
-		dialog = SettingsDialog(filters, port, config_mgr=self.config_mgr, icons_dir=self.icons_dir, parent=self)
+		dialog = SettingsDialog(
+			filters, port,
+			config_mgr=self.config_mgr,
+			icons_dir=self.icons_dir,
+			check_updates_callback=lambda: self._check_for_updates(silent=False),
+			parent=self,
+		)
 		if dialog.exec() == SettingsDialog.Accepted:
 			self.config_mgr.set_stem_filters(dialog.get_stem_filters())
 			self.config_mgr.set_stream_port(dialog.get_stream_port())

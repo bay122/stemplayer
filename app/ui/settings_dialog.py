@@ -15,6 +15,7 @@ from app.version import (
     APP_NAME, APP_VERSION, APP_AUTHOR, APP_AUTHOR_EMAIL,
     APP_GITHUB, APP_WEBSITE, APP_AUTOR_WEBSITE, APP_LICENSE
 )
+from app.services.update_checker import REPO
 
 
 # Categorías que se pueden personalizar
@@ -73,13 +74,15 @@ from PySide6.QtWidgets import QColorDialog
 
 
 class SettingsDialog(QDialog):
-    def __init__(self, stem_filters: dict, stream_port: int, config_mgr=None, icons_dir=None, parent=None):
+    def __init__(self, stem_filters: dict, stream_port: int, config_mgr=None,
+                 icons_dir=None, check_updates_callback=None, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Configuración")
         self.setMinimumWidth(580)
         self.setMinimumHeight(480)
         self.config_mgr = config_mgr
         self.icons_dir = icons_dir
+        self._check_updates_callback = check_updates_callback
         self.setStyleSheet(f"""
             QDialog {{
                 background-color: {theme.BG_PRIMARY};
@@ -130,6 +133,7 @@ class SettingsDialog(QDialog):
         self._build_stem_filters_tab()
         self._build_streaming_tab()
         self._build_ai_tab()
+        self._build_updates_tab()
         self._build_about_tab()
 
         layout.addWidget(self.tabs)
@@ -487,6 +491,91 @@ class SettingsDialog(QDialog):
             settings.setValue(f"ai/model/{provider_id}", model)
 
         self.accept()
+
+    # ---- Tab: Actualizaciones ----
+
+    def _build_updates_tab(self):
+        tab = QWidget()
+        tl = QVBoxLayout(tab)
+        tl.setSpacing(12)
+
+        title = QLabel("Actualizaciones automáticas")
+        title.setStyleSheet(f"font-size: 15px; font-weight: bold; color: {theme.TEXT_PRIMARY};")
+        tl.addWidget(title)
+
+        desc = QLabel(
+            "StemPlayer puede buscar actualizaciones en GitHub Releases "
+            "y descargar e instalar la nueva versión automáticamente."
+        )
+        desc.setWordWrap(True)
+        desc.setStyleSheet(f"color: {theme.TEXT_MUTED}; font-size: 12px; margin-bottom: 8px;")
+        tl.addWidget(desc)
+
+        self._updates_checkbox = QCheckBox("Buscar actualizaciones al iniciar")
+        settings = QSettings("StemPlayer", "StemPlayer")
+        self._updates_checkbox.setChecked(settings.value("updates/check_on_startup", "true") == "true")
+        self._updates_checkbox.setStyleSheet(f"""
+            QCheckBox {{
+                color: {theme.TEXT_PRIMARY};
+                font-size: 13px;
+                spacing: 8px;
+            }}
+            QCheckBox::indicator {{
+                width: 18px;
+                height: 18px;
+                border-radius: 4px;
+                border: 1px solid {theme.BORDER};
+                background-color: {theme.BG_INPUT};
+            }}
+            QCheckBox::indicator:checked {{
+                background-color: {theme.ACCENT_INFO};
+                border-color: {theme.ACCENT_INFO};
+            }}
+        """)
+        tl.addWidget(self._updates_checkbox)
+
+        info_box = QFrame()
+        info_box.setStyleSheet(f"""
+            QFrame {{
+                background-color: {theme.BG_TERTIARY};
+                border-radius: {theme.BORDER_RADIUS_SM};
+                padding: 12px;
+            }}
+        """)
+        info_layout = QVBoxLayout(info_box)
+        info_layout.setSpacing(4)
+
+        version_label = QLabel(f"Versión actual: {APP_VERSION}")
+        version_label.setStyleSheet(f"color: {theme.TEXT_PRIMARY}; font-size: 13px;")
+        info_layout.addWidget(version_label)
+
+        repo_label = QLabel(f"Repositorio: {REPO}")
+        repo_label.setStyleSheet(f"color: {theme.TEXT_MUTED}; font-size: 11px;")
+        info_layout.addWidget(repo_label)
+        tl.addWidget(info_box)
+
+        check_btn = QPushButton("Buscar actualización ahora")
+        check_btn.setMinimumHeight(32)
+        check_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {theme.ACCENT_INFO};
+                color: {theme.TEXT_PRIMARY};
+                border: none;
+                border-radius: {theme.BORDER_RADIUS_SM};
+                padding: 6px 16px;
+                font-weight: bold;
+                font-size: 12px;
+            }}
+            QPushButton:hover {{ background-color: {theme.ACCENT_INFO_HOVER}; }}
+        """)
+        if self._check_updates_callback:
+            check_btn.clicked.connect(self._check_updates_callback)
+        else:
+            check_btn.setEnabled(False)
+        tl.addWidget(check_btn)
+
+        tl.addStretch()
+        self.tabs.addTab(tab, "Actualizaciones")
 
     def _build_about_tab(self):
         tab = QWidget()
