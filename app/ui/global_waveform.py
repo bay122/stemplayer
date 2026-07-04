@@ -47,8 +47,19 @@ class GlobalWaveformView(QWidget):
         self._progress = max(0.0, min(1.0, ratio))
         self.update()
 
+    def set_total_duration(self, seconds: float):
+        """Records the song total duration. The widget uses it to draw the
+        total-time label on the right side. Storing this is also needed so
+        the parent layout can keep the deck total time in sync after seek."""
+        self._total_duration = max(0.0, float(seconds))
+        self.update()
+
+    def total_duration(self) -> float:
+        return getattr(self, "_total_duration", 0.0)
+
     def clear(self):
         self._peaks = None
+        self._total_duration = 0.0
         self.update()
 
     @staticmethod
