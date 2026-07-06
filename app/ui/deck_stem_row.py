@@ -12,6 +12,7 @@ from app.ui.svg_icon import svg_icon
 from app.ui.theme import current as theme
 from app.ui.volume_slider import VolumeSlider
 from app.ui.pan_slider import PanSlider
+from app.ui.widgets import NoWheelComboBox
 from app.utils.constants import STEM_CATEGORIES
 
 
@@ -315,7 +316,7 @@ class DeckStemRow(QWidget):
         self.name_edit.editingFinished.connect(self._on_name_edited)
         info.addWidget(self.name_edit)
 
-        self.category_combo = QComboBox()
+        self.category_combo = NoWheelComboBox()
         self.category_combo.addItems(STEM_CATEGORIES)
         self.category_combo.setCurrentText(category)
         self.category_combo.currentTextChanged.connect(self._on_category_changed)
@@ -544,6 +545,10 @@ class DeckStemRow(QWidget):
 
     def set_playhead(self, ratio: float):
         self.waveform.set_playhead(ratio)
+
+    def set_name(self, new_name: str):
+        """Actualiza el nombre interno del stem sin recrear el widget."""
+        self.stem_name = new_name
 
     def set_volume(self, volume: float):
         self.volume_slider.blockSignals(True)

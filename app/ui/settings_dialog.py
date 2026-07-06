@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QListWidget, QLineEdit, QDialogButtonBox, QGroupBox,
     QInputDialog, QMessageBox, QTabWidget, QWidget, QSpinBox,
-    QComboBox, QFrame, QGridLayout
+    QComboBox, QFrame, QGridLayout, QCheckBox
 )
 from PySide6.QtCore import Qt, QSettings, Signal
 from PySide6.QtGui import QColor, QPixmap
@@ -12,7 +12,7 @@ from app.ui.svg_icon import svg_icon
 from app.services.providers import get_available_providers
 from app.utils.crypto import encrypt_value, decrypt_value
 from app.version import (
-    APP_NAME, APP_VERSION, APP_AUTHOR, APP_AUTHOR_EMAIL,
+    APP_NAME, APP_VERSION, APP_AUTHOR,
     APP_GITHUB, APP_WEBSITE, APP_AUTOR_WEBSITE, APP_LICENSE
 )
 from app.services.update_checker import REPO
@@ -645,7 +645,6 @@ class SettingsDialog(QDialog):
 
         row("Web:", f'<a href="{APP_WEBSITE}" style="color: {theme.ACCENT_INFO};">{APP_WEBSITE}</a>', is_link=True)
         row("Autor:", APP_AUTHOR)
-        row("Email:", APP_AUTHOR_EMAIL)
         row("Web del autor:", f'<a href="{APP_AUTOR_WEBSITE}" style="color: {theme.ACCENT_INFO};">{APP_AUTOR_WEBSITE}</a>', is_link=True)
         row("GitHub:", f'<a href="{APP_GITHUB}" style="color: {theme.ACCENT_INFO};">{APP_GITHUB}</a>', is_link=True)
         row("Licencia:", APP_LICENSE)

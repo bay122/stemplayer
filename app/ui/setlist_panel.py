@@ -147,12 +147,28 @@ class SetlistPanel(QWidget):
 		self.setlist_combo.addItem("-- Seleccionar setlist --")
 		for sl in self.config_mgr.get_setlists():
 			self.setlist_combo.addItem(sl["name"])
-		self.setlist_combo.blockSignals(False)
-
 		if self.current_setlist_index >= 0:
 			self.setlist_combo.setCurrentIndex(self.current_setlist_index + 1)
 		else:
+			self.setlist_combo.setCurrentIndex(0)
 			self.setlist_songs_list.clear()
+		self.setlist_combo.blockSignals(False)
+
+	def refresh_combo(self):
+		"""Recarga la lista de setlists en el combo sin cambiar la selección actual.
+
+		Usado tras crear/eliminar un setlist para que aparezca en el dropdown
+		pero sin forzar que se abra ni que se cargue ninguna canción.
+		"""
+		self.setlist_combo.blockSignals(True)
+		self.setlist_combo.clear()
+		self.setlist_combo.addItem("-- Seleccionar setlist --")
+		for sl in self.config_mgr.get_setlists():
+			self.setlist_combo.addItem(sl["name"])
+		self.setlist_combo.setCurrentIndex(0)
+		self.setlist_combo.blockSignals(False)
+		self.setlist_songs_list.clear()
+		self.save_btn.setEnabled(False)
 
 	def _on_setlist_selected(self, index: int):
 		self.setlist_songs_list.clear()
@@ -172,10 +188,6 @@ class SetlistPanel(QWidget):
 				item = QListWidgetItem(display_text)
 				item.setData(Qt.UserRole, sid)
 				self.setlist_songs_list.addItem(item)
-
-			if self.setlist_songs_list.count() > 0:
-				self.setlist_songs_list.setCurrentRow(0)
-				self._on_song_clicked(self.setlist_songs_list.item(0))
 
 		self.save_btn.setEnabled(False)
 
@@ -286,8 +298,7 @@ class SetlistPanel(QWidget):
 		if not ok or not name.strip():
 			return False
 		self.config_mgr.add_setlist( name.strip(), [song_name])
-		self.current_setlist_index = len(self.config_mgr.get_setlists()) - 1
-		self.refresh_ui()
+		self.refresh_combo()
 		return True
 
 	def _edit_setlist(self):

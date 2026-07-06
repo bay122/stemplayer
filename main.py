@@ -7,24 +7,14 @@ from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import Qt
 from app.main_window import StemPlayer
 from app.ext.loader import load_theme, load_layout
+from app.utils.paths import get_project_root
 
 
-SPLASH_VIDEO = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    "assets", "splash", "splash.mp4"
-)
-SPLASH_IMAGE = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    "assets", "splash", "splash.png"
-)
-ICON_PATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    "assets", "icons", "icon.png"
-)
-ICON_FAV_DIR = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    "assets", "icons", "fav"
-)
+_BASE = get_project_root()
+SPLASH_VIDEO = os.path.join(_BASE, "assets", "splash", "splash.mp4")
+SPLASH_IMAGE = os.path.join(_BASE, "assets", "splash", "splash.png")
+ICON_PATH = os.path.join(_BASE, "assets", "icons", "icon.png")
+ICON_FAV_DIR = os.path.join(_BASE, "assets", "icons", "fav")
 
 
 def main():
@@ -86,11 +76,6 @@ def main():
                 print(f"No se pudo cargar splash: {e}")
                 splash = None
 
-        # Cerrar splash: video termina (con fadeout) o fallback de seguridad
-        if splash is not None:
-            splash.finished.connect(splash.close_splash)
-            QTimer.singleShot(12000, splash.close_splash)
-
         player = StemPlayer(theme=theme)
         player.resize(1400, 800)
 
@@ -108,6 +93,20 @@ def main():
         player.show()
         player.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         if splash is not None:
+            # Al cerrarse el splash, traer al frente la ventana del reproductor
+            # (queda detrás por el WindowStaysOnTopHint del splash) y luego
+            # cerrar el splash. Conexiones en orden FIFO.
+            def _bring_player_to_front():
+                if player.isMinimized():
+                    player.showNormal()
+                player.show()
+                player.activateWindow()
+                player.raise_()
+            splash.finished.connect(_bring_player_to_front)
+            splash.finished.connect(splash.close_splash)
+            # Fallback de seguridad: tras 12s, traer al frente y cerrar el splash
+            QTimer.singleShot(12000, _bring_player_to_front)
+            QTimer.singleShot(12000, splash.close_splash)
             player.destroyed.connect(splash.close_splash)
         player.activateWindow()
         player.raise_()

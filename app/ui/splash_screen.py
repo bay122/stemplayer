@@ -1,6 +1,9 @@
 import os
 import re
+import shutil
 import subprocess as sp
+import sys
+import tempfile
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import QWidget, QApplication, QCheckBox
 from PySide6.QtGui import QPainter, QImage, QPixmap, QColor
@@ -11,12 +14,49 @@ FADE_DURATION = 500
 WIDGET_W, WIDGET_H = 640, 480
 
 
+def _no_window_kwargs():
+    """Argumentos extra para subprocess en Windows que ocultan la ventana CMD.
+
+    En Windows, subprocess.Popen abre una ventana de consola al ejecutar un
+    binario aunque redirijamos stdout/stderr. Esto causa parpadeos de CMD
+    y posibles AppHang cuando hay varios procesos a la vez.
+    Con CREATE_NO_WINDOW la ventana nunca se crea.
+    """
+    if os.name == "nt":
+        return {"creationflags": 0x08000000}  # CREATE_NO_WINDOW
+    return {}
+
+
+def _resolve_ffmpeg_bin(ffmpeg_bin):
+    """Resuelve la ruta al binario de ffmpeg.
+
+    Prioriza:
+      1. La ruta explícita pasada como argumento.
+      2. ffmpeg[.exe] dentro de sys._MEIPASS (binario embebido por PyInstaller).
+      3. ffmpeg en PATH del sistema.
+    Retorna None si no se encuentra ffmpeg.
+    """
+    if ffmpeg_bin:
+        if os.path.isabs(ffmpeg_bin) and os.path.exists(ffmpeg_bin):
+            return ffmpeg_bin
+        found = shutil.which(ffmpeg_bin)
+        if found:
+            return found
+    meipass = getattr(sys, '_MEIPASS', None)
+    if meipass:
+        exe_name = "ffmpeg.exe" if os.name == "nt" else "ffmpeg"
+        candidate = os.path.join(meipass, exe_name)
+        if os.path.exists(candidate):
+            return candidate
+    return shutil.which("ffmpeg")
+
+
 class SplashScreen(QWidget):
     finished = Signal()
     mute_toggled = Signal(bool)
 
     def __init__(self, video_path=None, image_path=None, parent=None,
-                 ffmpeg_bin="ffmpeg", muted=False):
+                 ffmpeg_bin=None, muted=False):
         super().__init__(
             parent,
             Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint
@@ -24,11 +64,12 @@ class SplashScreen(QWidget):
         self.setAttribute(Qt.WA_OpaquePaintEvent, True)
         self.setFixedSize(WIDGET_W, WIDGET_H)
 
-        self._ffmpeg_bin = ffmpeg_bin
+        self._ffmpeg_bin = _resolve_ffmpeg_bin(ffmpeg_bin)
         self._ffmpeg_proc = None
         self._frame_pixmap = None
         self._muted = muted
         self._video_path = video_path
+        self._audio_cache_dir = tempfile.gettempdir()
 
         # --- Estado del Video ---
         self._fps = 30.0
@@ -64,7 +105,7 @@ class SplashScreen(QWidget):
         self._mute_checkbox.move(8, self.height() - 24)
 
         # --- Pre-cálculos (sin iniciar reproducción aún) ---
-        if video_path and os.path.exists(video_path):
+        if video_path and os.path.exists(video_path) and self._ffmpeg_bin:
             self._fps = self._get_video_fps(video_path) or 30.0
             self._audio_cache = self._cache_audio(video_path)
         elif image_path and os.path.exists(image_path):
@@ -91,7 +132,13 @@ class SplashScreen(QWidget):
 
     def _start_playback(self):
         self._current_frame = 0
-        
+
+        # Si no hay ffmpeg disponible, no podemos reproducir video.
+        # Cerramos el splash de inmediato para no bloquear el arranque.
+        if not self._ffmpeg_bin:
+            QTimer.singleShot(0, self._start_fadeout)
+            return
+
         # 1. Iniciar pipe de video
         try:
             self._ffmpeg_proc = sp.Popen(
@@ -99,10 +146,13 @@ class SplashScreen(QWidget):
                  "-f", "rawvideo", "-pix_fmt", "rgb24",
                  "-s", f"{WIDGET_W}x{WIDGET_H}", "-"],
                 stdout=sp.PIPE, stderr=sp.DEVNULL,
-                bufsize=self._frame_size * 4
+                bufsize=self._frame_size * 4,
+                **_no_window_kwargs(),
             )
         except Exception as e:
             print(f"[Splash] Error iniciando ffmpeg: {e}")
+            self._ffmpeg_proc = None
+            QTimer.singleShot(0, self._start_fadeout)
             return
 
         # 2. Iniciar audio
@@ -116,15 +166,31 @@ class SplashScreen(QWidget):
     # ═══════════════ AUDIO (RELOJ MAESTRO) ═══════════════
 
     def _cache_audio(self, video_path):
-        cache_path = os.path.splitext(video_path)[0] + "_audio.wav"
+        if not self._ffmpeg_bin:
+            return None
+        # En builds de PyInstaller onefile, _MEIPASS es de sólo lectura, así
+        # que escribimos el cache en el directorio temporal. En desarrollo y
+        # en builds onedir sí podemos escribir al lado del video.
+        meipass = getattr(sys, '_MEIPASS', None)
+        if meipass and os.path.normpath(os.path.dirname(video_path)) == os.path.normpath(meipass):
+            cache_path = os.path.join(self._audio_cache_dir, "stemplayer_splash_audio.wav")
+        else:
+            cache_path = os.path.splitext(video_path)[0] + "_audio.wav"
         if not os.path.exists(cache_path):
-            sp.run(
-                [self._ffmpeg_bin, "-i", video_path, "-vn",
-                 "-acodec", "pcm_s16le", "-ar", "44100", "-ac", "2",
-                 cache_path, "-y"],
-                stdout=sp.DEVNULL, stderr=sp.DEVNULL, check=False
-            )
-        return cache_path if os.path.getsize(cache_path) > 44 else None
+            try:
+                sp.run(
+                    [self._ffmpeg_bin, "-i", video_path, "-vn",
+                     "-acodec", "pcm_s16le", "-ar", "44100", "-ac", "2",
+                     cache_path, "-y"],
+                    stdout=sp.DEVNULL, stderr=sp.DEVNULL, check=False,
+                    **_no_window_kwargs(),
+                )
+            except Exception as e:
+                print(f"[Splash] Error generando cache de audio: {e}")
+                return None
+        if os.path.exists(cache_path) and os.path.getsize(cache_path) > 44:
+            return cache_path
+        return None
 
     def _start_audio(self):
         try:
@@ -167,7 +233,8 @@ class SplashScreen(QWidget):
         try:
             result = sp.run(
                 [self._ffmpeg_bin, "-i", video_path, "-f", "null", "-"],
-                stdout=sp.DEVNULL, stderr=sp.PIPE, text=True, check=False
+                stdout=sp.DEVNULL, stderr=sp.PIPE, text=True, check=False,
+                **_no_window_kwargs(),
             )
             match = re.search(r'(\d+(?:\.\d+)?)\s*fps', result.stderr)
             if match:
@@ -254,6 +321,9 @@ class SplashScreen(QWidget):
         if self._audio_stream is not None:
             try:
                 self._audio_stream.stop()
+            except Exception:
+                pass
+            try:
                 self._audio_stream.close()
             except Exception:
                 pass

@@ -21,14 +21,17 @@ class ChordProEditorWindow(QMainWindow):
     play_requested = Signal(str)
 
     def __init__(self, chopro_path: str, sync_path: str | None = None,
-                 main_window=None, parent=None):
+                 main_window=None, parent=None, icons_dir: str | None = None):
         super().__init__(parent)
         self._chopro_path = chopro_path
         self._main_window = main_window
+        if icons_dir is None and main_window is not None and hasattr(main_window, "icons_dir"):
+            icons_dir = main_window.icons_dir
+        self._icons_dir = icons_dir or "./icons/svgs"
         self.setWindowTitle(f"ChordPro Editor - {os.path.basename(chopro_path)}")
         self.resize(1100, 720)
 
-        self._view = ChordProEditorView(self)
+        self._view = ChordProEditorView(self, icons_dir=self._icons_dir)
         self.setCentralWidget(self._view)
         self._view.play_requested = self.play_requested  # forward signal
 

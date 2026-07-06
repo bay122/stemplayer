@@ -239,7 +239,7 @@ Lee el archivo [`LICENSE`](LICENSE) para los términos completos.
 ## 👤 Autor
 
 **Pablo Jiménez**  
-[GitHub](https://github.com/bay122) · [Web](https://pablo-jimenez.site) · [Email](mailto:pablo.jimenez@users.noreply.github.com)
+[GitHub](https://github.com/bay122) · [Web](https://pablo-jimenez.site)
 
 ---
 

@@ -515,6 +515,7 @@ class ChordProGenerationMixin(DeckStatusMixin):
             sync_path=sync_path if os.path.exists(sync_path) else None,
             main_window=self,
             parent=self,
+            icons_dir=getattr(self, "icons_dir", None),
         )
         self.chordpro_window.saved.connect(self._on_chordpro_saved)
         self.chordpro_window.show()

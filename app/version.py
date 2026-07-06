@@ -1,7 +1,6 @@
 APP_NAME = "StemPlayer"
 APP_VERSION = "0.1.0"
 APP_AUTHOR = "Pablo Jiménez"
-APP_AUTHOR_EMAIL = "pablo.jimenez@users.noreply.github.com"
 APP_GITHUB = "https://github.com/bay122/stemplayer"
 APP_WEBSITE = "https://stemplayer.pablo-jimenez.site"
 APP_AUTOR_WEBSITE = "https://pablo-jimenez.site"

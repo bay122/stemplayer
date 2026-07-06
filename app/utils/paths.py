@@ -9,6 +9,18 @@ def get_base_path():
     return os.path.dirname(os.path.abspath(__file__))
 
 
+def get_project_root():
+    """Obtiene la raíz del proyecto (donde están assets/, main.py, etc.).
+
+    En desarrollo, apunta al directorio que contiene la carpeta `app/`.
+    En un build de PyInstaller, apunta a la raíz del bundle (_MEIPASS) que
+    también contiene los assets/.
+    """
+    if hasattr(sys, '_MEIPASS'):
+        return sys._MEIPASS
+    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
 def get_icons_dir():
     if hasattr(sys, '_MEIPASS'):
         return os.path.join(sys._MEIPASS, "icons")

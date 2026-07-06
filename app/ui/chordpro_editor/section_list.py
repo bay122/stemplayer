@@ -110,9 +110,10 @@ class SectionListPanel(QWidget):
     requestRename = Signal(int, str)
     requestPlay = Signal(int)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, icons_dir: str = "./icons/svgs"):
         super().__init__(parent)
         self._doc = None
+        self.icons_dir = icons_dir
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -129,7 +130,7 @@ class SectionListPanel(QWidget):
 
         btn_row = QHBoxLayout()
         self._add_btn = QPushButton()
-		#icon plus
+        #icon plus
         self._add_btn.setIcon(svg_icon(os.path.join(self.icons_dir, "fad-plus.svg")))
         self._add_btn.setToolTip("Añadir sección")
         self._add_btn.clicked.connect(self._on_add_clicked)

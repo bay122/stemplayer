@@ -38,9 +38,10 @@ _MERGE_WINDOW_MS = 500
 class ChordProEditorView(QWidget):
     dirtyChanged = Signal(bool)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, icons_dir: str = "./icons/svgs"):
         super().__init__(parent)
         self._doc = None
+        self._icons_dir = icons_dir
         self._undo = QUndoStack(self)
         self._undo.setUndoLimit(200)
         self._last_text_command_time = 0.0
@@ -98,7 +99,7 @@ class ChordProEditorView(QWidget):
 
         # Body
         splitter = QSplitter(Qt.Horizontal)
-        self._section_panel = SectionListPanel()
+        self._section_panel = SectionListPanel(icons_dir=self._icons_dir)
         self._theory_panel = MusicTheoryPanel()
         self._editor = ChordProTextEditor(scale_provider=self._scale_provider)
         self._preview = ChordProPreview()

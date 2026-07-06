@@ -9,6 +9,7 @@ from app.ui.svg_icon import svg_icon
 from app.ui.volume_slider import VolumeSlider
 from app.ui.pan_slider import PanSlider
 from app.ui.theme import current as theme
+from app.ui.widgets import NoWheelComboBox
 
 
 class StemItemWidget(QWidget):
@@ -47,7 +48,7 @@ class StemItemWidget(QWidget):
         self.name_edit.editingFinished.connect(self._on_name_edited)
         info_layout.addWidget(self.name_edit)
 
-        self.category_combo = QComboBox()
+        self.category_combo = NoWheelComboBox()
         self.category_combo.addItems(STEM_CATEGORIES)
         self.category_combo.setCurrentText(category)
         self.category_combo.currentTextChanged.connect(self._on_category_changed)
@@ -251,6 +252,14 @@ class StemItemWidget(QWidget):
 
     def _on_category_changed(self, category: str):
         self.category_changed.emit(self.stem_name, category)
+
+    def set_name(self, new_name: str):
+        """Actualiza el nombre interno del stem sin recrear el widget.
+
+        Llamado tras un rename externo para que el widget mantenga su posición
+        en el layout y no haya flash visual.
+        """
+        self.stem_name = new_name
 
     def set_volume(self, volume: float):
         self.volume_slider.blockSignals(True)
